@@ -1,0 +1,6 @@
+{
+  "name": "D3COMPOSURE Storefront",
+  "description": "A high-end minimal storefront for artifacts and digital identities, featuring Google Drive integration and Stripe payments.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

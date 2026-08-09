@@ -1,0 +1,367 @@
+@import url('https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@300;400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=JetBrains+Mono:wght@400;500&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Anton&family=Quicksand:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-typewriter: "Arial", "Helvetica Neue", Helvetica, sans-serif;
+  --font-sans: "Arial", "Helvetica Neue", Helvetica, sans-serif;
+  --font-serif: "Arial", "Helvetica Neue", Helvetica, sans-serif;
+  --font-mono: "Arial", "Helvetica Neue", Helvetica, sans-serif;
+  --font-display: "Arial Black", "Impact", "Anton", sans-serif;
+  --font-brand: "Arial Black", "Impact", "Anton", sans-serif;
+  --font-numbers: "Arial", "Helvetica Neue", Helvetica, sans-serif;
+  --font-cursive: "Arial", "Helvetica Neue", Helvetica, sans-serif;
+  
+  --spacing-phi-0: 0.236rem;
+  --spacing-phi-1: 0.382rem;
+  --spacing-phi-2: 0.618rem;
+  --spacing-phi-3: 1rem;
+  --spacing-phi-4: 1.618rem;
+  --spacing-phi-5: 2.618rem;
+  --spacing-phi-6: 4.236rem;
+  --spacing-phi-7: 6.854rem;
+  --spacing-phi-8: 11.09rem;
+
+  --text-phi-0: 0.618rem;
+  --text-phi-1: 1rem;
+  --text-phi-2: 1.618rem;
+  --text-phi-3: 2.618rem;
+  --text-phi-4: 4.236rem;
+  --text-phi-5: 6.854rem;
+
+  --radius-phi-0: 0.236rem;
+  --radius-phi-1: 0.382rem;
+  --radius-phi-2: 0.618rem;
+  --radius-phi-3: 1rem;
+  --radius-phi-4: 1.618rem;
+  
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-gold: var(--gold);
+  --color-soft: var(--soft);
+  --color-silver: var(--silver);
+  --color-aura: var(--aura);
+}
+
+:root {
+  --paper: #ffffff;
+  --ink: #000000;
+  --ink-rgb: 0, 0, 0;
+  --gold: #000000;
+  --soft: #ffffff;
+  --silver: #eaeaea;
+  --aura: rgba(0, 0, 0, 0.03);
+}
+
+[data-theme='light'] {
+  --paper: #ffffff;
+  --ink: #000000;
+  --ink-rgb: 0, 0, 0;
+  --gold: #000000;
+  --soft: #ffffff;
+  --silver: #eaeaea;
+  --aura: rgba(0, 0, 0, 0.03);
+}
+
+@layer base {
+  body {
+    background: var(--paper);
+    @apply text-ink font-sans antialiased selection:bg-ink selection:text-paper;
+    font-family: "Arial", "Helvetica Neue", Helvetica, sans-serif;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  
+  /* All unbolded text uses the unbolded version of the d3composure logo font ("Arial", "Helvetica Neue", Helvetica, sans-serif) */
+  p, span, div, a, li, td, th, input, select, textarea, button,
+  .font-mono,
+  .font-mono *,
+  .font-typewriter,
+  .font-typewriter *,
+  .typewriter-content,
+  .typewriter-content *,
+  .tab-content,
+  .tab-content *,
+  .font-ssense {
+    font-family: "Arial", "Helvetica Neue", Helvetica, sans-serif;
+  }
+
+  /* Globally make heavy weights use the logo font ("Arial Black", "Impact", "Anton", sans-serif) with slightly less space between letters */
+  .font-bold, .font-semibold, .font-black, .font-extrabold, b, strong,
+  .font-mono .font-bold, .font-mono b, .font-mono strong,
+  .tab-content .font-bold, .tab-content b,
+  button.font-bold, .font-display {
+    font-family: "Arial Black", "Impact", "Anton", sans-serif !important;
+    letter-spacing: -0.03em;
+  }
+  .font-bold {
+    font-weight: 600 !important;
+  }
+  .font-semibold {
+    font-weight: 500 !important;
+  }
+  .font-black {
+    font-weight: 800 !important;
+  }
+
+  /* Slightly tighter spacing across tracking utilities when applied to bold fonted text */
+  .font-bold.tracking-widest, .font-semibold.tracking-widest, .font-black.tracking-widest,
+  .font-extrabold.tracking-widest, .font-display.tracking-widest {
+    letter-spacing: 0.025em;
+  }
+  .font-bold.tracking-wider, .font-semibold.tracking-wider, .font-black.tracking-wider,
+  .font-extrabold.tracking-wider, .font-display.tracking-wider {
+    letter-spacing: 0.01em;
+  }
+  .font-bold.tracking-wide, .font-semibold.tracking-wide, .font-black.tracking-wide,
+  .font-extrabold.tracking-wide, .font-display.tracking-wide {
+    letter-spacing: -0.015em;
+  }
+  .font-bold.tracking-normal, .font-semibold.tracking-normal, .font-black.tracking-normal,
+  .font-extrabold.tracking-normal, .font-display.tracking-normal {
+    letter-spacing: -0.03em;
+  }
+  .font-bold.tracking-tight, .font-semibold.tracking-tight, .font-black.tracking-tight,
+  .font-extrabold.tracking-tight, .font-display.tracking-tight {
+    letter-spacing: -0.045em;
+  }
+  .font-bold.tracking-tighter, .font-semibold.tracking-tighter, .font-black.tracking-tighter,
+  .font-extrabold.tracking-tighter, .font-display.tracking-tighter {
+    letter-spacing: -0.06em;
+  }
+
+  h1, h3, h4 {
+    @apply font-display font-medium tracking-tight uppercase;
+    transform: scaleY(1.12);
+    transform-origin: center left;
+  }
+
+  h2 {
+    font-family: "Arial", "Helvetica Neue", Helvetica, sans-serif;
+    @apply font-medium tracking-tight uppercase;
+    transform: scaleY(1.12);
+    transform-origin: center left;
+  }
+
+  p {
+    transform: scaleY(1.04);
+    transform-origin: center left;
+  }
+
+  button, .btn-amiable {
+    transform: scaleY(1.08);
+    transform-origin: center;
+  }
+
+  a, button, p, span, h1, h2, h3, h4, li {
+    @apply transition-all duration-300;
+  }
+
+  /* Theme-aware glow on hover */
+  [data-theme='dark'] a:hover, [data-theme='dark'] button:hover {
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5), 0 0 20px rgba(255, 255, 255, 0.2);
+  }
+  [data-theme='light'] a:hover, [data-theme='light'] button:hover {
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.2), 0 0 20px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.btn-amiable {
+  @apply px-8 py-3 rounded-full font-display font-bold uppercase text-[10px] tracking-[0.05em] transition-all duration-300 border border-ink/20 hover:bg-ink hover:text-paper;
+}
+
+.glass {
+  @apply backdrop-blur-md border border-ink/10;
+  background-color: var(--aura);
+}
+
+.atmosphere {
+  background: 
+    radial-gradient(circle at 50% 30%, var(--aura) 0%, transparent 60%),
+    radial-gradient(circle at 10% 80%, var(--aura) 0%, transparent 50%);
+  filter: blur(30px);
+  opacity: 0.6;
+  will-change: filter;
+  transform: translateZ(0);
+}
+
+.artifact-shadow {
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+[data-theme='light'] .artifact-shadow {
+  box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+}
+
+.mono-label {
+  @apply font-mono text-[10px] uppercase tracking-[0.05em] font-bold opacity-60;
+  transform: scaleY(1.1);
+  transform-origin: center left;
+  display: inline-block;
+}
+
+.logos-text {
+  @apply font-sans font-bold text-lg leading-tight uppercase tracking-tight opacity-90;
+  transform: scaleY(1.12);
+  transform-origin: center left;
+  display: inline-block;
+}
+
+@keyframes glitch {
+  0% { transform: translate(0); }
+  20% { transform: translate(-1px, 1px); }
+  40% { transform: translate(-1px, -1px); }
+  60% { transform: translate(1px, 1px); }
+  80% { transform: translate(1px, -1px); }
+  100% { transform: translate(0); }
+}
+
+@keyframes hologram {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@layer utilities {
+  .bg-hologram {
+    background: linear-gradient(
+      45deg,
+      rgba(var(--ink), 0.1),
+      var(--paper),
+      rgba(var(--ink), 0.1)
+    );
+    background-size: 400% 400%;
+    animation: hologram 10s ease infinite;
+  }
+
+  .bg-metallic {
+    background: var(--paper);
+    background-attachment: fixed;
+  }
+
+  .bg-metallic-silver {
+    background: radial-gradient(circle at 50% 50%, var(--paper) 40%, var(--silver) 100%);
+    background-size: 200% 200%;
+    background-attachment: fixed;
+    box-shadow: inset 0 0 120px var(--aura);
+  }
+
+  .text-glow-ink {
+    text-shadow: 0 0 10px var(--ink), 0 0 20px var(--ink);
+    opacity: 0.8;
+  }
+
+  .text-phi-0 { font-size: var(--text-phi-0); line-height: 1.618; }
+  .text-phi-1 { font-size: var(--text-phi-1); line-height: 1.618; }
+  .text-phi-2 { font-size: var(--text-phi-2); line-height: 1.25; }
+  .text-phi-3 { font-size: var(--text-phi-3); line-height: 1.1; }
+  .text-phi-4 { font-size: var(--text-phi-4); line-height: 1; }
+  .text-phi-5 { font-size: var(--text-phi-5); line-height: 1; }
+}
+
+/* 3D/4D Dimensional Glassmorphism with deep glossy gradient reflections */
+.dimension-card-3d {
+  position: relative;
+  background: linear-gradient(135deg, rgba(var(--ink-rgb), 0.02) 0%, rgba(var(--ink-rgb), 0.005) 100%);
+  border: 1px solid rgba(var(--ink-rgb), 0.08);
+  backdrop-filter: blur(12px);
+  box-shadow: 
+    0 10px 30px rgba(0, 0, 0, 0.2),
+    inset 0 1px 1px rgba(var(--ink-rgb), 0.05);
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.dimension-card-no-outline {
+  position: relative;
+  background: transparent;
+  border: none;
+  backdrop-filter: none;
+  box-shadow: none;
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+[data-theme='light'] .dimension-card-3d {
+  background: linear-gradient(135deg, rgba(var(--ink-rgb), 0.015) 0%, rgba(var(--ink-rgb), 0.002) 100%);
+  border: 1px solid rgba(var(--ink-rgb), 0.06);
+  box-shadow: 
+    0 10px 30px rgba(0, 0, 0, 0.05),
+    inset 0 1px 1px rgba(255, 255, 255, 0.6);
+}
+
+[data-theme='light'] .dimension-card-no-outline {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.dimension-card-3d::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(var(--ink-rgb), 0.15) 0%, transparent 40%, transparent 60%, rgba(var(--ink-rgb), 0.05) 100%);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: xor;
+  -webkit-mask-composite: xor;
+  padding: 1px;
+  z-index: 2;
+  transition: opacity 0.5s ease;
+}
+
+.dimension-card-3d::after, .dimension-card-no-outline::after {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 35%,
+    rgba(var(--ink-rgb), 0.06) 45%,
+    rgba(var(--ink-rgb), 0.1) 50%,
+    rgba(var(--ink-rgb), 0.06) 55%,
+    transparent 65%
+  );
+  transform: rotate(-15deg);
+  background-size: 200% 200%;
+  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s;
+  opacity: 0;
+  z-index: 5;
+}
+
+.dimension-card-3d:hover {
+  transform: translateY(-6px);
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(var(--ink-rgb), 0.02),
+    inset 0 1px 2px rgba(var(--ink-rgb), 0.1);
+  border-color: rgba(var(--ink-rgb), 0.18);
+}
+
+.dimension-card-no-outline:hover {
+  transform: translateY(-6px);
+  box-shadow: none;
+}
+
+[data-theme='light'] .dimension-card-3d:hover {
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.12),
+    0 0 20px rgba(var(--ink-rgb), 0.01),
+    inset 0 1px 2px rgba(255, 255, 255, 0.8);
+  border-color: rgba(var(--ink-rgb), 0.15);
+}
+
+[data-theme='light'] .dimension-card-no-outline:hover {
+  box-shadow: none;
+}
+
+.dimension-card-3d:hover::after, .dimension-card-no-outline:hover::after {
+  transform: rotate(-15deg) translate(20%, 20%);
+  opacity: 1;
+}
+
+.animate-glitch {
+  animation: glitch 0.2s infinite;
+}

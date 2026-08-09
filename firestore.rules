@@ -1,0 +1,160 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // DEFAULT DENY
+    // ===============================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ===============================================================
+    // Global Helpers
+    // ===============================================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.admin == true ||
+        request.auth.token.email == "judylee2000s@gmail.com" ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$');
+    }
+
+    // ===============================================================
+    // Validation Blueprints
+    // ===============================================================
+
+    function isValidProduct(data) {
+      return data.keys().hasAll(['name', 'price', 'category']) &&
+             data.name is string && data.name.size() < 200 &&
+             data.price is number && data.price >= 0 &&
+             data.category is string &&
+             (!('description' in data) || (data.description is string && data.description.size() < 5000)) &&
+             (!('images' in data) || (data.images is list && data.images.size() <= 20)) &&
+             (!('stock' in data) || (data.stock is int)) &&
+             (!('is_visible' in data) || (data.is_visible is bool)) &&
+             (!('is_featured' in data) || (data.is_featured is bool)) &&
+             (!('status' in data) || (data.status in ['approved', 'pending', 'rejected'])) &&
+             (!('author_uid' in data) || (data.author_uid is string));
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll(['customer_email', 'total_amount', 'items']) &&
+             isValidEmail(data.customer_email) &&
+             data.total_amount is number && data.total_amount >= 0 &&
+             data.items is list &&
+             (!('status' in data) || (data.status is string));
+    }
+
+    function isValidWaitingListEntry(data) {
+      return data.keys().hasAll(['email', 'created_at']) &&
+             (!('name' in data) || (data.name is string && data.name.size() <= 200)) &&
+             (!('status' in data) || (data.status is string && data.status.size() <= 50)) &&
+             (!('source' in data) || (data.source is string && data.source.size() <= 50)) &&
+             isValidEmail(data.email) &&
+             data.created_at == request.time;
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin() || (isSignedIn() && request.auth.uid == userId && !incoming().keys().hasAny(['role']));
+    }
+
+    match /products/{productId} {
+      allow read: if true;
+      allow create: if isAdmin() || 
+                      (isSignedIn() && 
+                       isValidProduct(incoming()) && 
+                       incoming().status == 'pending' &&
+                       incoming().is_visible == false &&
+                       incoming().author_uid == request.auth.uid);
+      allow update: if isAdmin() || 
+                      (isSignedIn() && 
+                       existing().author_uid == request.auth.uid &&
+                       incoming().status == existing().status &&
+                       incoming().is_visible == existing().is_visible &&
+                       incoming().author_uid == existing().author_uid &&
+                       isValidProduct(incoming()));
+      allow delete: if isAdmin();
+    }
+
+    match /announcements/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /discounts/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /settings/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /newsletter/{id} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /orders/{orderId} {
+      allow create: if true; // Public checkout
+      allow get: if true; // Public order status tracking by ID
+      allow list: if isAdmin() || (isSignedIn() && existing().customer_email == request.auth.token.email);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /transmissions/{id} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /logs/{id} {
+      allow create: if true; // App logging
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /size_selections/{id} {
+      allow read: if true;
+      allow write: if true; // Public activity tracking
+    }
+
+    match /drive_links/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /waiting_list/{id} {
+      allow create: if isValidWaitingListEntry(incoming());
+      allow read, update, delete: if isAdmin();
+    }
+
+  }
+}

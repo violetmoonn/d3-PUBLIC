@@ -1,0 +1,83 @@
+{
+  "entities": {
+    "product": {
+      "title": "Product",
+      "description": "Store products for Composure",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "category": { "type": "string" },
+        "images": { "type": "array" },
+        "stock": { "type": "integer" },
+        "is_visible": { "type": "boolean" },
+        "is_featured": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["approved", "pending", "rejected"] },
+        "author_uid": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "price", "category"]
+    },
+    "order": {
+      "title": "Order",
+      "description": "Customer orders",
+      "type": "object",
+      "properties": {
+        "customer_name": { "type": "string" },
+        "customer_email": { "type": "string" },
+        "customer_phone": { "type": "string" },
+        "customer_address": { "type": "string" },
+        "total_amount": { "type": "number" },
+        "items": { "type": "array" },
+        "status": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["customer_email", "total_amount", "items"]
+    },
+    "announcement": {
+      "title": "Announcement",
+      "description": "Site-wide announcements",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "link": { "type": "string" },
+        "active": { "type": "boolean" },
+        "background_color": { "type": "string" },
+        "text_color": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["text", "active"]
+    },
+    "waiting_list_entry": {
+      "title": "Waiting List Entry",
+      "description": "Submissions to the store waiting list",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "product",
+      "description": "Collection of products"
+    },
+    "/orders/{orderId}": {
+      "schema": "order",
+      "description": "Collection of orders"
+    },
+    "/announcements/{announcementId}": {
+      "schema": "announcement",
+      "description": "Collection of site-wide announcements"
+    },
+    "/waiting_list/{id}": {
+      "schema": "waiting_list_entry",
+      "description": "Collection of waitlist sign-ups"
+    }
+  }
+}
