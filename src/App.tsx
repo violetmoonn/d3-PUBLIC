@@ -2132,17 +2132,6 @@ export default function App() {
             </motion.div>
           )}
 
-          {view === 'preferences' && (
-            <motion.div 
-              key="preferences"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-            >
-              <PreferencesView preferences={preferences} onChangePreferences={handleChangePreferences} />
-            </motion.div>
-          )}
-
           {view === 'gallery' && (
             <motion.div 
               key="gallery"
@@ -2197,7 +2186,7 @@ export default function App() {
             <FooterNewsletter />
 
             {/* Horizontalized Navigation, Legal, and Connect with reduced whitespace */}
-            <div className="flex flex-col gap-2.5 w-full text-left pt-2 border-t border-black/10">
+            <div className="flex flex-col gap-2.5 w-full text-left pt-1">
               {/* Row 1: Navigation */}
               <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-left">
                 <h4 className="text-[9.5px] font-sans font-semibold uppercase tracking-[0.08em] text-black shrink-0 mr-1">navigation:</h4>
@@ -2210,7 +2199,7 @@ export default function App() {
                   { id: 'sustainability', label: settings.tab_sustainability_label || t('sustainability') },
                   { id: 'contact', label: settings.tab_contact_label || 'CONTACT' },
                   { id: 'affiliates', label: t('affiliates') },
-                  { id: 'preferences', label: t('preferences') }
+                  { id: 'live-chat', label: 'CHAT WITH A LIVE ASSISTANT' }
                 ]
                   .filter(link => !settings.sections || settings.sections[link.id] !== false)
                   .sort((a, b) => a.label.localeCompare(b.label))
@@ -2221,6 +2210,8 @@ export default function App() {
                         onClick={() => {
                           if (link.id === 'size-chart') {
                             window.dispatchEvent(new CustomEvent('open-size-chart'));
+                          } else if (link.id === 'live-chat') {
+                            window.dispatchEvent(new CustomEvent('open-live-chat'));
                           } else {
                             setView(link.id as any);
                             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2301,7 +2292,7 @@ export default function App() {
             </div>
 
             {/* Region, Location & Language Selector Bar */}
-            <div className="pt-4 flex flex-wrap items-center justify-center gap-3 font-sans text-[11px] text-black/70 border-t border-black/10">
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-3 font-sans text-[11px] text-black/70">
               <div className="flex flex-wrap items-center justify-center gap-y-2.5 gap-x-6 w-full">
                 
                 {/* Store Location Selector */}
@@ -2510,7 +2501,7 @@ export default function App() {
         onClose={() => setIsWaitlistPopupOpen(false)}
       />
 
-      {view !== 'home' && <CustomerServiceBot />}
+      <CustomerServiceBot />
 
       {/* Admin Specific Modals */}
       {isAdmin && (

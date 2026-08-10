@@ -356,19 +356,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         )}
       </div>
 
-      <div className={`p-3.5 flex flex-col flex-grow items-center justify-between text-center space-y-2 ${isCenterpiece ? 'min-h-[140px] py-6' : 'min-h-[120px]'}`}>
+      <div className={`p-3.5 flex flex-col flex-grow items-center justify-center text-center space-y-2 ${isCenterpiece ? 'min-h-[140px] py-6' : 'min-h-[120px]'}`}>
         {/* Product Name */}
         <h3 
           onClick={() => onSelect(product)}
-          className={`font-mono font-bold uppercase tracking-[0.14em] text-ink cursor-pointer hover:opacity-70 transition-opacity line-clamp-2 ${isCenterpiece ? 'text-sm sm:text-base md:text-lg' : 'text-[11px]'}`}
+          className={`font-mono font-bold uppercase tracking-[0.14em] text-ink cursor-pointer hover:opacity-70 transition-opacity line-clamp-2 text-center w-full ${isCenterpiece ? 'text-sm sm:text-base md:text-lg' : 'text-[11px]'}`}
         >
           {product.name}
         </h3>
 
         {/* Price & Admin Stock */}
-        <div className="flex flex-col items-center gap-0.5 w-full">
+        <div className="flex flex-col items-center justify-center text-center gap-0.5 w-full">
           {isAdmin && isEditingPrice ? (
-            <div className="flex items-center gap-1 justify-center">
+            <div className="flex items-center gap-1 justify-center w-full">
               <input 
                 autoFocus
                 type="number"
@@ -382,7 +382,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             </div>
           ) : (
             <span 
-              className={`font-mono font-bold ${isCenterpiece ? 'text-sm sm:text-base md:text-lg' : 'text-xs'} ${isAdmin ? 'cursor-pointer hover:bg-ink/5 px-2 py-0.5 rounded' : ''}`}
+              className={`font-mono font-bold text-center ${isCenterpiece ? 'text-sm sm:text-base md:text-lg' : 'text-xs'} ${isAdmin ? 'cursor-pointer hover:bg-ink/5 px-2 py-0.5 rounded' : ''}`}
               onClick={(e) => {
                 if (isAdmin) {
                   e.stopPropagation();
@@ -395,7 +395,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           )}
 
           {isAdmin && (
-            <span className="text-[8px] font-mono font-bold text-ink/60 uppercase tracking-widest">
+            <span className="text-[8px] font-mono font-bold text-ink/60 uppercase tracking-widest text-center">
               IN STOCK ({product.stock})
             </span>
           )}

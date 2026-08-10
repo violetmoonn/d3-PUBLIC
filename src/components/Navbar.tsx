@@ -148,7 +148,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'refund', label: settings.tab_refund_label || 'REFUND POLICY' },
     { id: 'contact', label: settings.tab_contact_label || 'CONTACT' },
     { id: 'affiliates', label: t('affiliates') },
-    { id: 'preferences', label: t('preferences') }
+    { id: 'live-chat', label: 'CHAT WITH A LIVE ASSISTANT' }
   ].filter(link => !settings.sections || settings.sections[link.id] !== false);
 
   return (
@@ -250,19 +250,19 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="fixed inset-0 bg-black/40 backdrop-blur-xs z-[65] pointer-events-auto"
             />
 
-            {/* Vertical banner on left half of screen */}
+            {/* Centered Menu Drawer / Overlay */}
             <motion.div 
-              initial={{ x: '-100%' }}
-              animate={{ x: '0%' }}
-              exit={{ x: '-100%' }}
-              transition={{ type: 'spring', damping: 30, stiffness: 320 }}
-              className="menu-drawer font-sans fixed left-0 top-0 bottom-0 z-[70] w-[280px] sm:w-[320px] max-w-[85vw] h-full bg-paper border-r border-ink/10 shadow-2xl flex flex-col justify-between p-6 sm:p-8 overflow-y-auto pointer-events-auto"
+              initial={{ opacity: 0, scale: 0.95, y: -10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 350 }}
+              className="menu-drawer font-sans fixed left-1/2 top-16 sm:top-20 -translate-x-1/2 z-[70] w-[280px] sm:w-[320px] max-w-[90vw] max-h-[82vh] bg-paper border border-ink/15 shadow-2xl rounded-xl flex flex-col justify-between p-5 overflow-y-auto pointer-events-auto text-center"
             >
               <div>
                 {/* Search Bar inside Menu */}
-                <div className="relative mb-6 pb-2">
-                  <div className="flex items-center gap-4">
-                    <span className="font-mono text-[10.5px] font-bold tracking-[0.2em] text-ink shrink-0">SEARCH:</span>
+                <div className="relative mb-4 pb-2 border-b border-ink/10">
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="font-mono text-[10px] font-bold tracking-[0.2em] text-ink shrink-0">SEARCH:</span>
                     <div className="flex-1 relative">
                       <input
                         type="text"
@@ -279,12 +279,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                           }
                         }}
                         placeholder=""
-                        className="w-full bg-transparent text-xs sm:text-sm font-mono tracking-[0.15em] text-ink focus:outline-none pb-1.5 uppercase transition-colors"
+                        className="w-full bg-transparent text-xs font-mono tracking-[0.15em] text-ink focus:outline-none pb-1 uppercase transition-colors border-b border-ink/20 focus:border-ink text-center"
                       />
                       {searchTerm && (
                         <button
                           onClick={() => onSearchChange('')}
-                          className="absolute right-0 top-1/2 -translate-y-1/2 p-1 text-ink/40 hover:text-ink transition-colors cursor-pointer"
+                          className="absolute right-0 top-1/2 -translate-y-1/2 p-0.5 text-ink/40 hover:text-ink transition-colors cursor-pointer"
                           aria-label="Clear search"
                         >
                           <X size={12} />
@@ -295,21 +295,21 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                   {/* Recent Searches in Drawer */}
                   {recentSearches.length > 0 && (
-                    <div className="mt-3 font-mono text-[9px] uppercase tracking-wider">
-                      <div className="flex items-center justify-between text-ink/40 mb-1.5">
+                    <div className="mt-2.5 font-mono text-[9px] uppercase tracking-wider">
+                      <div className="flex items-center justify-between text-ink/40 mb-1">
                         <span className="flex items-center gap-1"><Clock size={9} /> RECENT</span>
                         <button 
                           onClick={clearRecentSearches}
-                          className="hover:text-ink transition-colors cursor-pointer"
+                          className="hover:text-ink transition-colors cursor-pointer text-[8.5px]"
                         >
                           CLEAR
                         </button>
                       </div>
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="flex flex-wrap items-center justify-center gap-1">
                         {recentSearches.map((term) => (
                           <span
                             key={term}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 bg-ink/5 hover:bg-ink/10 text-ink/80 hover:text-ink rounded-none cursor-pointer transition-colors group"
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-ink/5 hover:bg-ink/10 text-ink/80 hover:text-ink rounded-none cursor-pointer transition-colors group"
                           >
                             <span onClick={() => {
                               handleSelectRecentSearch(term);
@@ -334,8 +334,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   )}
                 </div>
 
-                {/* Navigation Links - Clean SSENSE Sans-Serif Font */}
-                <div className="space-y-4 mb-8">
+                {/* Navigation Links - Clean Center Aligned */}
+                <div className="space-y-1.5 mb-4">
                   {primaryLinks.map(link => (
                     <a 
                       key={link.id}
@@ -349,36 +349,43 @@ export const Navbar: React.FC<NavbarProps> = ({
                         }
                         setIsMobileMenuOpen(false); 
                       }}
-                      className={`block w-full text-left font-sans text-[14px] tracking-wide uppercase transition-all ${
-                        currentView === link.id ? 'text-ink font-extrabold opacity-100' : 'text-ink/60 hover:text-ink font-medium'
+                      className={`block w-full text-center font-sans text-[13px] tracking-wide uppercase transition-all py-1.5 px-2 rounded hover:bg-ink/5 ${
+                        currentView === link.id ? 'text-ink font-extrabold bg-ink/5' : 'text-ink/70 hover:text-ink font-medium'
                       }`}
                     >
                       {link.label}
                     </a>
                   ))}
 
-                  <div className="py-2" />
+                  <div className="my-2 border-t border-ink/10 pt-1" />
 
                   {customerCareLinks.map(link => (
                     <a 
                       key={link.id}
                       href={`#${link.id}`}
-                      onClick={(e) => { e.preventDefault(); onNavigate(link.id); setIsMobileMenuOpen(false); }}
-                      className={`block w-full text-left font-sans text-[14px] tracking-wide uppercase transition-all ${
-                        currentView === link.id ? 'text-ink font-extrabold opacity-100' : 'text-ink/60 hover:text-ink font-medium'
+                      onClick={(e) => { 
+                        e.preventDefault(); 
+                        if (link.id === 'live-chat') {
+                          window.dispatchEvent(new CustomEvent('open-live-chat'));
+                        } else {
+                          onNavigate(link.id); 
+                        }
+                        setIsMobileMenuOpen(false); 
+                      }}
+                      className={`block w-full text-center font-sans text-[12px] tracking-wide uppercase transition-all py-1 px-2 rounded hover:bg-ink/5 ${
+                        currentView === link.id ? 'text-ink font-extrabold bg-ink/5' : 'text-ink/60 hover:text-ink font-medium'
                       }`}
                     >
                       {link.label}
                     </a>
                   ))}
-
-
                 </div>
               </div>
 
               {/* Drawer Footer */}
-              <div className="pt-6 flex items-center justify-between font-sans text-[12px] font-medium uppercase tracking-widest text-ink/50">
+              <div className="pt-3 border-t border-ink/10 flex items-center justify-center gap-3 font-sans text-[11px] font-medium uppercase tracking-widest text-ink/50 text-center">
                 <span>D3COMPOSURE ARCHIVE</span>
+                <span>•</span>
                 <span>EST. 2026</span>
               </div>
             </motion.div>

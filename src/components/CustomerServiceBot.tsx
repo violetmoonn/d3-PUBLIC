@@ -25,6 +25,16 @@ export const CustomerServiceBot: React.FC = () => {
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const handleOpenChat = () => setIsOpen(true);
+    window.addEventListener('open-customer-service-chat', handleOpenChat);
+    window.addEventListener('open-live-chat', handleOpenChat);
+    return () => {
+      window.removeEventListener('open-customer-service-chat', handleOpenChat);
+      window.removeEventListener('open-live-chat', handleOpenChat);
+    };
+  }, []);
+
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -235,13 +245,14 @@ export const CustomerServiceBot: React.FC = () => {
         <motion.button
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
-          whileHover={{ opacity: 0.7 }}
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
           onClick={() => setIsOpen(true)}
-          className="text-[10px] font-mono tracking-wider text-ink/80 hover:text-ink hover:underline cursor-pointer bg-paper/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-ink/10 shadow-sm transition-all"
+          className="text-[10.5px] font-mono tracking-widest text-ink hover:text-black cursor-pointer bg-white/95 hover:bg-white backdrop-blur-md px-3.5 py-1.5 rounded-full border border-ink/20 shadow-md transition-all flex items-center justify-center group"
           aria-label="Open Customer Service"
           id="customer-service-bot-trigger"
         >
-          chat with a live assistant
+          <span className="uppercase font-semibold">chat with a live assistant</span>
         </motion.button>
       )}
     </div>
