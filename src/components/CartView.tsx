@@ -70,7 +70,7 @@ export const CartView: React.FC<CartViewProps> = ({
       {/* Title Header stacked vertically & tight (Left-aligned) */}
       <div className="border-b border-ink/10 pb-3 mb-4 flex flex-col items-start justify-start text-left gap-1">
         <h1 className="text-[12px] font-bold uppercase tracking-[0.15em] text-ink">
-          {`SHOPPING BAG (${totalItems})`}
+          {totalItems > 0 ? `SHOPPING BAG (${totalItems})` : 'SHOPPING BAG'}
         </h1>
 
         <button

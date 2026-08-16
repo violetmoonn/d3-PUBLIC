@@ -360,7 +360,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         {/* Product Name */}
         <h3 
           onClick={() => onSelect(product)}
-          className={`font-mono font-bold uppercase tracking-[0.14em] text-ink cursor-pointer hover:opacity-70 transition-opacity line-clamp-2 text-center w-full ${isCenterpiece ? 'text-sm sm:text-base md:text-lg' : 'text-[11px]'}`}
+          className={`font-mono font-medium uppercase tracking-[0.14em] text-ink cursor-pointer hover:opacity-70 transition-opacity line-clamp-2 text-center w-full ${isCenterpiece ? 'text-sm sm:text-base md:text-lg' : 'text-[11px]'}`}
         >
           {product.name}
         </h3>
@@ -376,13 +376,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 onChange={(e) => setTempPrice(parseFloat(e.target.value))}
                 onBlur={handlePriceSave}
                 onKeyDown={(e) => e.key === 'Enter' && handlePriceSave()}
-                className="w-16 bg-ink/5 border-none p-0 font-mono text-xs text-center focus:ring-0"
+                className="w-16 bg-ink/5 border-none p-0 font-mono text-xs text-center focus:ring-0 font-medium"
               />
-              <span className="font-mono text-xs">USD</span>
+              <span className="font-mono text-xs font-normal">USD</span>
             </div>
           ) : (
             <span 
-              className={`font-mono font-bold text-center ${isCenterpiece ? 'text-sm sm:text-base md:text-lg' : 'text-xs'} ${isAdmin ? 'cursor-pointer hover:bg-ink/5 px-2 py-0.5 rounded' : ''}`}
+              className={`font-mono font-medium text-center ${isCenterpiece ? 'text-sm sm:text-base md:text-lg' : 'text-xs'} ${isAdmin ? 'cursor-pointer hover:bg-ink/5 px-2 py-0.5 rounded' : ''}`}
               onClick={(e) => {
                 if (isAdmin) {
                   e.stopPropagation();
@@ -395,7 +395,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           )}
 
           {isAdmin && (
-            <span className="text-[8px] font-mono font-bold text-ink/60 uppercase tracking-widest text-center">
+            <span className="text-[8px] font-mono font-medium text-ink/60 uppercase tracking-widest text-center">
               IN STOCK ({product.stock})
             </span>
           )}

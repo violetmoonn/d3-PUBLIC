@@ -36,13 +36,13 @@ export const ContactForm: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto py-24 px-8 space-y-8 font-mono">
       <div className="mb-12 text-center space-y-4">
-        <h1 className="text-2xl font-mono font-bold uppercase tracking-widest text-center">CONTACT</h1>
-        <div className="space-y-2 text-[12px] font-mono opacity-70 leading-relaxed uppercase">
+        <h1 className="text-2xl font-mono font-bold tracking-widest text-center text-ink">Contact</h1>
+        <div className="space-y-2 text-[12px] font-mono opacity-70 leading-relaxed">
           <p className="lowercase">
             <a href="mailto:inquire@d3composure.com" className="transition-all hover:text-zinc-600 underline">inquire@d3composure.com</a>
           </p>
           <p className="pt-4 max-w-md mx-auto">
-            IF THERE IS A PROBLEM WITH YOUR ORDER, CONTACT US AND WE WILL TAKE FULL RESPONSIBILITY
+            If there is a problem with your order, contact us and we will take full responsibility.
           </p>
         </div>
       </div>
@@ -54,8 +54,8 @@ export const ContactForm: React.FC = () => {
               required
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              className="w-full bg-transparent border-b border-ink/10 py-4 text-[11px] font-mono focus:ring-0 focus:border-ink transition-all placeholder:text-ink/20 uppercase"
-              placeholder="NAME"
+              className="w-full bg-transparent border-b border-ink/10 py-4 text-[11px] font-mono focus:ring-0 focus:border-ink transition-all placeholder:text-ink/30"
+              placeholder="Name"
               id="name"
             />
           </div>
@@ -66,8 +66,8 @@ export const ContactForm: React.FC = () => {
               type="email"
               value={formData.email}
               onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-              className="w-full bg-transparent border-b border-ink/10 py-4 text-[11px] font-mono focus:ring-0 focus:border-ink transition-all placeholder:text-ink/20 uppercase"
-              placeholder="EMAIL"
+              className="w-full bg-transparent border-b border-ink/10 py-4 text-[11px] font-mono focus:ring-0 focus:border-ink transition-all placeholder:text-ink/30"
+              placeholder="Email address"
               id="email"
             />
           </div>
@@ -78,8 +78,8 @@ export const ContactForm: React.FC = () => {
               rows={4}
               value={formData.message}
               onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
-              className="w-full bg-transparent border-b border-ink/10 py-4 text-[11px] font-mono focus:ring-0 focus:border-ink transition-all placeholder:text-ink/20 uppercase resize-none"
-              placeholder="MESSAGE"
+              className="w-full bg-transparent border-b border-ink/10 py-4 text-[11px] font-mono focus:ring-0 focus:border-ink transition-all placeholder:text-ink/30 resize-none"
+              placeholder="Message"
               id="message"
             />
           </div>

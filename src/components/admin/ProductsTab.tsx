@@ -44,6 +44,8 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
   const [categoryFilter, setCategoryFilter] = React.useState('ALL');
   const [sortConfig, setSortConfig] = React.useState<{ key: keyof Product; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
   const [viewMode, setViewMode] = React.useState<'GRID' | 'TABLE'>('TABLE');
+  const [showLowStockOnly, setShowLowStockOnly] = React.useState(false);
+  const [isBulkRestocking, setIsBulkRestocking] = React.useState(false);
   
   // POS Quick Add Form State
   const [quickAddName, setQuickAddName] = React.useState('');
@@ -61,30 +63,88 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
   // Statistics
   const totalProducts = products.length;
   const activeProducts = products.filter(p => p.is_visible).length;
-  const lowStockProducts = products.filter(p => (p.stock || 0) < 5).length;
+  const lowStockItems = React.useMemo(() => products.filter(p => (p.stock ?? 0) < 5), [products]);
+  const lowStockProducts = lowStockItems.length;
   const totalCatalogValue = products.reduce((sum, p) => sum + (p.price * (p.stock || 1)), 0);
+
+  const handleBulkRestock = async (amount: number = 5) => {
+    if (lowStockItems.length === 0) return;
+    setIsBulkRestocking(true);
+    try {
+      for (const item of lowStockItems) {
+        const currentStock = item.stock || 0;
+        await onUpdateProduct({ id: item.id, stock: currentStock + amount });
+      }
+    } finally {
+      setIsBulkRestocking(false);
+    }
+  };
 
   const handleFileUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setIsUploadingPhoto(true);
+    const file = files[0];
     const formData = new FormData();
-    formData.append('image', files[0]);
+    formData.append('image', file);
 
     try {
+      const headers: Record<string, string> = {};
+      const savedPass = localStorage.getItem('d3_admin_password') || sessionStorage.getItem('d3_admin_password');
+      if (savedPass) {
+        headers['x-admin-password'] = savedPass;
+      }
+
       const response = await fetch('/api/admin/upload', {
         method: 'POST',
+        headers,
         body: formData
       });
 
-      if (!response.ok) throw new Error('UPLOAD_FAILED');
-
-      const results = await response.json();
-      const uploadedUrl = Array.isArray(results) ? results[0]?.url : results.url;
-      if (uploadedUrl) {
-        setQuickAddPhoto(uploadedUrl);
+      if (response.ok) {
+        const results = await response.json();
+        const uploadedUrl = Array.isArray(results) ? results[0]?.url : results.url;
+        if (uploadedUrl) {
+          setQuickAddPhoto(uploadedUrl);
+          setIsUploadingPhoto(false);
+          return;
+        }
       }
+
+      // Fallback 1: Firebase Storage
+      try {
+        const { storage, ref, uploadBytes, getDownloadURL } = await import('../../firebase');
+        if (storage) {
+          const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+          const fileRef = ref(storage, `products/quick_${Date.now()}_${safeName}`);
+          await uploadBytes(fileRef, file);
+          const dlUrl = await getDownloadURL(fileRef);
+          if (dlUrl) {
+            setQuickAddPhoto(dlUrl);
+            setIsUploadingPhoto(false);
+            return;
+          }
+        }
+      } catch (fbErr) {
+        console.warn("Firebase upload fallback note:", fbErr);
+      }
+
+      // Fallback 2: Local data URL preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        if (dataUrl) {
+          setQuickAddPhoto(dataUrl);
+        }
+      };
+      reader.readAsDataURL(file);
     } catch (err) {
-      console.error("Quick photo upload failed:", err);
+      console.warn("Quick photo upload fallback used:", err);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        if (dataUrl) setQuickAddPhoto(dataUrl);
+      };
+      reader.readAsDataURL(file);
     } finally {
       setIsUploadingPhoto(false);
     }
@@ -130,7 +190,8 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                              p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                              p.id.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesCategory = categoryFilter === 'ALL' || p.category === categoryFilter;
-        return matchesSearch && matchesCategory;
+        const matchesLowStock = !showLowStockOnly || (p.stock ?? 0) < 5;
+        return matchesSearch && matchesCategory && matchesLowStock;
       })
       .sort((a, b) => {
         const aValue = a[sortConfig.key];
@@ -139,7 +200,7 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
         if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
       });
-  }, [products, searchQuery, categoryFilter, sortConfig]);
+  }, [products, searchQuery, categoryFilter, showLowStockOnly, sortConfig]);
 
   const displayedProducts = React.useMemo(() => {
     return filteredProducts.slice(0, displayCount);
@@ -163,7 +224,7 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                 </h2>
                 <span className="px-2.5 py-1 bg-emerald-500/20 text-emerald-400 text-[9px] font-bold uppercase tracking-widest border border-emerald-500/30 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                  PIN: 00736121 VERIFIED
+                  AUTHENTICATED & SECURED
                 </span>
               </div>
               <p className="text-[11px] text-white/60 uppercase tracking-widest">
@@ -192,26 +253,139 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
 
         {/* POS Stats Bar */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
-          <div className="bg-white/5 border border-white/10 p-4 flex flex-col justify-between">
-            <span className="text-[10px] text-white/50 font-bold uppercase tracking-widest">TOTAL ITEMS</span>
-            <span className="text-2xl font-black text-white mt-2">{totalProducts}</span>
-          </div>
+          <button 
+            onClick={() => setShowLowStockOnly(false)}
+            className={`text-left p-4 transition-all border cursor-pointer ${
+              !showLowStockOnly ? 'bg-white/10 border-white/40 shadow-inner' : 'bg-white/5 border-white/10 hover:bg-white/10'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-white/50 font-bold uppercase tracking-widest">TOTAL ITEMS</span>
+              {!showLowStockOnly && <span className="text-[8px] bg-white/20 text-white px-1.5 py-0.5 uppercase">VIEWING</span>}
+            </div>
+            <span className="text-2xl font-black text-white mt-2 block">{totalProducts}</span>
+          </button>
+
           <div className="bg-white/5 border border-white/10 p-4 flex flex-col justify-between">
             <span className="text-[10px] text-white/50 font-bold uppercase tracking-widest">PUBLISHED ON STORE</span>
             <span className="text-2xl font-black text-emerald-400 mt-2">{activeProducts} / {totalProducts}</span>
           </div>
-          <div className="bg-white/5 border border-white/10 p-4 flex flex-col justify-between">
-            <span className="text-[10px] text-white/50 font-bold uppercase tracking-widest">LOW STOCK WARNING (&lt;5)</span>
+
+          {/* Interactive Low Stock Card */}
+          <button 
+            onClick={() => setShowLowStockOnly(prev => !prev)}
+            className={`text-left p-4 transition-all border cursor-pointer flex flex-col justify-between relative ${
+              showLowStockOnly 
+                ? 'bg-amber-500/20 border-amber-400 text-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.2)]' 
+                : lowStockProducts > 0 
+                  ? 'bg-amber-500/10 border-amber-500/40 hover:bg-amber-500/15' 
+                  : 'bg-white/5 border-white/10'
+            }`}
+            title="Click to toggle low stock products filter"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-amber-300/80 font-bold uppercase tracking-widest flex items-center gap-1.5">
+                <AlertTriangle size={12} className={lowStockProducts > 0 ? "text-amber-400 animate-pulse" : "text-white/40"} />
+                LOW STOCK WARNING (&lt;5)
+              </span>
+              {showLowStockOnly ? (
+                <span className="text-[8px] bg-amber-400 text-black font-black px-1.5 py-0.5 uppercase">FILTERED</span>
+              ) : lowStockProducts > 0 ? (
+                <span className="text-[8px] bg-amber-500/30 text-amber-300 px-1.5 py-0.5 uppercase font-bold">CLICK TO FILTER</span>
+              ) : null}
+            </div>
             <span className={`text-2xl font-black mt-2 ${lowStockProducts > 0 ? 'text-amber-400' : 'text-white'}`}>
               {lowStockProducts}
             </span>
-          </div>
+          </button>
+
           <div className="bg-white/5 border border-white/10 p-4 flex flex-col justify-between">
             <span className="text-[10px] text-white/50 font-bold uppercase tracking-widest">EST. CATALOG VALUE</span>
             <span className="text-2xl font-black text-white mt-2">{formatPrice(totalCatalogValue)}</span>
           </div>
         </div>
       </div>
+
+      {/* Dynamic Low Stock Notification Banner */}
+      {lowStockProducts > 0 && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-amber-500/10 border-2 border-amber-500/40 p-5 sm:p-6 text-ink shadow-lg space-y-4"
+        >
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-amber-500/20 pb-4">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="w-9 h-9 bg-amber-500 text-black flex items-center justify-center font-bold shrink-0">
+                <AlertTriangle size={20} className="animate-pulse" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-amber-950">
+                    INVENTORY NOTIFICATION: {lowStockProducts} {lowStockProducts === 1 ? 'PRODUCT HAS' : 'PRODUCTS HAVE'} LESS THAN 5 UNITS REMAINING
+                  </h3>
+                  <span className="px-2 py-0.5 bg-amber-500 text-black text-[9px] font-black uppercase tracking-widest">
+                    ACTION REQUIRED
+                  </span>
+                </div>
+                <p className="text-[11px] text-amber-900/80 uppercase tracking-wide mt-0.5">
+                  Replenish inventory counts below to prevent checkout outages on active storefront items.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+              <button
+                onClick={() => setShowLowStockOnly(prev => !prev)}
+                className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-all border cursor-pointer ${
+                  showLowStockOnly 
+                    ? 'bg-amber-500 text-black border-amber-500 shadow-sm' 
+                    : 'bg-black text-white hover:bg-neutral-800 border-black'
+                }`}
+              >
+                {showLowStockOnly ? '✓ SHOWING LOW STOCK ONLY' : `VIEW ${lowStockProducts} LOW STOCK ITEMS`}
+              </button>
+
+              <button
+                onClick={() => handleBulkRestock(5)}
+                disabled={isBulkRestocking}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold uppercase tracking-widest transition-all flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50"
+              >
+                {isBulkRestocking ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                <span>{isBulkRestocking ? 'RESTOCKING...' : '+5 RESTOCK ALL'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Item Badges List */}
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-amber-900/60 mr-1">
+              AFFECTED ITEMS:
+            </span>
+            {lowStockItems.map((item, idx) => (
+              <div 
+                key={`pos-low-stock-${item.id || item.name || idx}-${idx}`}
+                className="inline-flex items-center gap-2 px-2.5 py-1 bg-paper border border-amber-500/30 text-[10px] font-mono shadow-sm"
+              >
+                <span className="font-bold text-ink truncate max-w-[140px] uppercase">
+                  {item.name}
+                </span>
+                <span className={`px-1.5 py-0.2 font-black text-[9px] ${
+                  (item.stock ?? 0) === 0 ? 'bg-rose-600 text-white' : 'bg-amber-500/20 text-amber-900 border border-amber-500/40'
+                }`}>
+                  {(item.stock ?? 0) === 0 ? 'OUT OF STOCK' : `${item.stock} LEFT`}
+                </span>
+                <button
+                  onClick={() => onUpdateProduct({ id: item.id, stock: (item.stock || 0) + 5 })}
+                  className="text-amber-800 hover:text-black font-bold text-[9px] hover:underline cursor-pointer border-l border-amber-500/20 pl-1.5"
+                  title="Quick add +5 stock"
+                >
+                  +5
+                </button>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* POS Quick Add Item Terminal */}
       <div className="bg-paper border border-ink/15 text-ink p-6 sm:p-8 space-y-6 shadow-xl">
@@ -388,41 +562,71 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <div className="lg:col-span-2 relative">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30" />
-          <input 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="SEARCH BY TITLE, ID, OR CATEGORY..."
-            className="w-full bg-ink/5 border border-ink/15 p-3.5 pl-12 text-[11px] font-mono focus:outline-none focus:border-ink uppercase"
-          />
-        </div>
+      <div className="space-y-3">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          <div className="lg:col-span-2 relative">
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30" />
+            <input 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="SEARCH BY TITLE, ID, OR CATEGORY..."
+              className="w-full bg-ink/5 border border-ink/15 p-3.5 pl-12 text-[11px] font-mono focus:outline-none focus:border-ink uppercase"
+            />
+          </div>
 
-        <div className="relative">
-          <Filter size={16} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30" />
-          <select 
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="w-full bg-ink/5 border border-ink/15 p-3.5 pl-12 text-[11px] font-mono focus:outline-none focus:border-ink uppercase appearance-none cursor-pointer"
+          <div className="relative">
+            <Filter size={16} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30" />
+            <select 
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="w-full bg-ink/5 border border-ink/15 p-3.5 pl-12 text-[11px] font-mono focus:outline-none focus:border-ink uppercase appearance-none cursor-pointer"
+            >
+              <option value="ALL">ALL CATEGORIES ({products.length})</option>
+              <option value="ARTIFACT">ARTIFACT</option>
+              <option value="USER_SUBMISSION">USER SUBMISSION</option>
+              <option value="TOPS">TOPS</option>
+              <option value="BOTTOMS">BOTTOMS</option>
+              <option value="ACCESSORIES">ACCESSORIES</option>
+              <option value="ARCHIVE">ARCHIVE</option>
+            </select>
+          </div>
+
+          <button 
+            onClick={() => setSortConfig(prev => ({ ...prev, direction: prev.direction === 'asc' ? 'desc' : 'asc' }))}
+            className="bg-ink/5 border border-ink/15 p-3.5 text-[11px] font-mono font-bold uppercase tracking-widest hover:bg-ink/10 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
-            <option value="ALL">ALL CATEGORIES ({products.length})</option>
-            <option value="ARTIFACT">ARTIFACT</option>
-            <option value="USER_SUBMISSION">USER SUBMISSION</option>
-            <option value="TOPS">TOPS</option>
-            <option value="BOTTOMS">BOTTOMS</option>
-            <option value="ACCESSORIES">ACCESSORIES</option>
-            <option value="ARCHIVE">ARCHIVE</option>
-          </select>
+            {sortConfig.direction === 'asc' ? <SortAsc size={15} /> : <SortDesc size={15} />}
+            <span>SORT ({sortConfig.direction.toUpperCase()})</span>
+          </button>
         </div>
 
-        <button 
-          onClick={() => setSortConfig(prev => ({ ...prev, direction: prev.direction === 'asc' ? 'desc' : 'asc' }))}
-          className="bg-ink/5 border border-ink/15 p-3.5 text-[11px] font-mono font-bold uppercase tracking-widest hover:bg-ink/10 transition-all flex items-center justify-center gap-2 cursor-pointer"
-        >
-          {sortConfig.direction === 'asc' ? <SortAsc size={15} /> : <SortDesc size={15} />}
-          <span>SORT ({sortConfig.direction.toUpperCase()})</span>
-        </button>
+        {/* Quick Filter Pills */}
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <span className="text-[9px] font-bold uppercase tracking-widest opacity-50">VIEW FILTER:</span>
+          <button
+            onClick={() => setShowLowStockOnly(false)}
+            className={`px-3 py-1 text-[10px] font-mono font-bold uppercase tracking-wider transition-all border cursor-pointer ${
+              !showLowStockOnly 
+                ? 'bg-black text-white border-black' 
+                : 'bg-ink/5 text-ink/70 hover:text-ink border-ink/15'
+            }`}
+          >
+            ALL ITEMS ({products.length})
+          </button>
+          <button
+            onClick={() => setShowLowStockOnly(true)}
+            className={`px-3 py-1 text-[10px] font-mono font-bold uppercase tracking-wider transition-all border flex items-center gap-1.5 cursor-pointer ${
+              showLowStockOnly 
+                ? 'bg-amber-500 text-black border-amber-500 shadow-sm font-black' 
+                : lowStockProducts > 0 
+                  ? 'bg-amber-500/15 text-amber-900 border-amber-500/40 hover:bg-amber-500/25' 
+                  : 'bg-ink/5 text-ink/40 border-ink/10'
+            }`}
+          >
+            <AlertTriangle size={11} className={lowStockProducts > 0 ? "text-amber-600 animate-pulse" : "opacity-40"} />
+            <span>LOW STOCK (&lt;5 ITEMS) ({lowStockProducts})</span>
+          </button>
+        </div>
       </div>
 
       {/* Display Modes */}
@@ -443,10 +647,22 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-ink/10">
-              {displayedProducts.map((product) => {
+              {displayedProducts.map((product, pIdx) => {
                 const coverImage = (product.images?.[0] as any)?.url || product.images?.[0] || '';
+                const isLowStock = (product.stock ?? 0) < 5;
+                const isOutOfStock = (product.stock ?? 0) === 0;
+
                 return (
-                  <tr key={product.id} className="hover:bg-ink/5 transition-colors">
+                  <tr 
+                    key={`pos-table-row-${product.id || product.name || pIdx}-${pIdx}`} 
+                    className={`transition-colors ${
+                      isOutOfStock 
+                        ? 'bg-rose-500/[0.04] border-l-4 border-l-rose-500 hover:bg-rose-500/[0.08]' 
+                        : isLowStock 
+                          ? 'bg-amber-500/[0.05] border-l-4 border-l-amber-500 hover:bg-amber-500/[0.09]' 
+                          : 'hover:bg-ink/5'
+                    }`}
+                  >
                     {/* Cover Thumbnail */}
                     <td className="p-3.5">
                       <div className="w-12 h-12 bg-black/5 border border-ink/15 relative overflow-hidden group">
@@ -457,25 +673,57 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                             <ImageIcon size={16} />
                           </div>
                         )}
+                        {isLowStock && (
+                          <div className={`absolute top-0 left-0 right-0 py-0.5 text-[7px] font-mono font-black text-center uppercase tracking-tighter ${
+                            isOutOfStock ? 'bg-rose-600 text-white' : 'bg-amber-500 text-black'
+                          }`}>
+                            {isOutOfStock ? 'OUT' : `${product.stock} LEFT`}
+                          </div>
+                        )}
                         <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white cursor-pointer">
                           <Upload size={12} />
                           <input 
                             type="file" 
                             accept="image/*" 
                             className="hidden" 
-                            onChange={(e) => {
+                            onChange={async (e) => {
                               if (e.target.files && e.target.files[0]) {
+                                const file = e.target.files[0];
                                 const formData = new FormData();
-                                formData.append('image', e.target.files[0]);
-                                fetch('/api/admin/upload', { method: 'POST', body: formData })
-                                  .then(r => r.json())
-                                  .then(res => {
-                                    const url = Array.isArray(res) ? res[0]?.url : res.url;
+                                formData.append('image', file);
+                                try {
+                                  const headers: Record<string, string> = {};
+                                  const savedPass = localStorage.getItem('d3_admin_password') || sessionStorage.getItem('d3_admin_password');
+                                  if (savedPass) headers['x-admin-password'] = savedPass;
+                                  
+                                  const res = await fetch('/api/admin/upload', { method: 'POST', headers, body: formData });
+                                  if (res.ok) {
+                                    const data = await res.json();
+                                    const url = Array.isArray(data) ? data[0]?.url : data.url;
+                                    if (url) {
+                                      const updatedImages = [{ url, type: 'image' as const }, ...(product.images || []).slice(1)];
+                                      onUpdateProduct({ id: product.id, images: updatedImages });
+                                      return;
+                                    }
+                                  }
+                                } catch (uploadErr) {
+                                  console.warn("Table row upload fallback:", uploadErr);
+                                }
+                                try {
+                                  const { storage, ref, uploadBytes, getDownloadURL } = await import('../../firebase');
+                                  if (storage) {
+                                    const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+                                    const fileRef = ref(storage, `products/${product.id}_${Date.now()}_${safeName}`);
+                                    await uploadBytes(fileRef, file);
+                                    const url = await getDownloadURL(fileRef);
                                     if (url) {
                                       const updatedImages = [{ url, type: 'image' as const }, ...(product.images || []).slice(1)];
                                       onUpdateProduct({ id: product.id, images: updatedImages });
                                     }
-                                  });
+                                  }
+                                } catch (fbErr) {
+                                  console.warn("Firebase upload fallback:", fbErr);
+                                }
                               }
                             }}
                           />
@@ -483,9 +731,22 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                       </div>
                     </td>
 
-                    {/* Title */}
-                    <td className="p-3.5 font-bold uppercase tracking-wide max-w-[180px] truncate">
-                      {product.name}
+                    {/* Title & Low Stock Badge */}
+                    <td className="p-3.5 font-bold uppercase tracking-wide max-w-[200px]">
+                      <div className="truncate">{product.name}</div>
+                      {isOutOfStock ? (
+                        <div className="mt-1">
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-rose-600 text-white text-[8px] font-mono font-black uppercase tracking-wider shadow-sm">
+                            <AlertTriangle size={8} /> OUT OF STOCK
+                          </span>
+                        </div>
+                      ) : isLowStock ? (
+                        <div className="mt-1">
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-500/20 text-amber-900 border border-amber-500/40 text-[8px] font-mono font-bold uppercase tracking-wider">
+                            <AlertTriangle size={8} /> LOW STOCK: {product.stock} LEFT
+                          </span>
+                        </div>
+                      ) : null}
                     </td>
 
                     {/* Category */}
@@ -512,26 +773,45 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                       </div>
                     </td>
 
-                    {/* Stock POS Incrementer */}
+                    {/* Stock POS Incrementer with Warning & Quick Restock */}
                     <td className="p-3.5 text-center">
-                      <div className="inline-flex items-center border border-ink/20 bg-ink/5">
-                        <button
-                          onClick={() => onUpdateProduct({ id: product.id, stock: Math.max(0, (product.stock || 0) - 1) })}
-                          className="px-2 py-1 hover:bg-ink/10 transition-colors cursor-pointer font-bold text-ink"
-                          title="Decrease Stock"
-                        >
-                          <Minus size={12} />
-                        </button>
-                        <span className="px-3 font-bold min-w-[32px] text-center">
-                          {product.stock || 0}
-                        </span>
-                        <button
-                          onClick={() => onUpdateProduct({ id: product.id, stock: (product.stock || 0) + 1 })}
-                          className="px-2 py-1 hover:bg-ink/10 transition-colors cursor-pointer font-bold text-ink"
-                          title="Increase Stock"
-                        >
-                          <Plus size={12} />
-                        </button>
+                      <div className="inline-flex items-center">
+                        <div className={`inline-flex items-center border ${
+                          isOutOfStock 
+                            ? 'border-rose-500/50 bg-rose-500/10' 
+                            : isLowStock 
+                              ? 'border-amber-500/50 bg-amber-500/10' 
+                              : 'border-ink/20 bg-ink/5'
+                        }`}>
+                          <button
+                            onClick={() => onUpdateProduct({ id: product.id, stock: Math.max(0, (product.stock || 0) - 1) })}
+                            className="px-2 py-1 hover:bg-ink/10 transition-colors cursor-pointer font-bold text-ink"
+                            title="Decrease Stock"
+                          >
+                            <Minus size={12} />
+                          </button>
+                          <span className={`px-2.5 font-bold min-w-[32px] text-center font-mono ${
+                            isOutOfStock ? 'text-rose-700 font-black' : isLowStock ? 'text-amber-800 font-black' : ''
+                          }`}>
+                            {product.stock || 0}
+                          </span>
+                          <button
+                            onClick={() => onUpdateProduct({ id: product.id, stock: (product.stock || 0) + 1 })}
+                            className="px-2 py-1 hover:bg-ink/10 transition-colors cursor-pointer font-bold text-ink"
+                            title="Increase Stock"
+                          >
+                            <Plus size={12} />
+                          </button>
+                        </div>
+                        {isLowStock && (
+                          <button
+                            onClick={() => onUpdateProduct({ id: product.id, stock: (product.stock || 0) + 5 })}
+                            className="ml-1.5 px-2 py-1 bg-amber-500/20 hover:bg-amber-500 text-amber-900 hover:text-black text-[9px] font-mono font-bold uppercase border border-amber-500/40 transition-colors cursor-pointer"
+                            title="Quick restock +5 units"
+                          >
+                            +5
+                          </button>
+                        )}
                       </div>
                     </td>
 
@@ -612,9 +892,9 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
       ) : (
         /* POS GRID VIEW */
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
-          {displayedProducts.map((product) => (
+          {displayedProducts.map((product, pIdx) => (
             <AdminProductCard 
-              key={product.id}
+              key={`pos-grid-card-${product.id || product.name || pIdx}-${pIdx}`}
               product={product}
               onFocusProduct={onFocusProduct}
               index={products.indexOf(product)}

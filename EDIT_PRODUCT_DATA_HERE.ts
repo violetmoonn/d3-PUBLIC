@@ -19,8 +19,10 @@ export const products = [
     stripe_buy_button_id: "buy_btn_1TAei0Q4FdRda8h8gr1qQnw4",
     stripe_publishable_key: "pk_live_51T8ECtQ4FdRda8h8nfdJSUR7txP58VE5Gpt3eqzVkBY7yHIhagkM85zML8BMqfHkseITaVI72Dwm1RzOUJmYjPqQ00irFfM8FW",
     images: [
-      { url: "/uploads/IMG 4800 1:3.png", type: "image" },
-      { url: "/uploads/IMG 3215 3:3.png", type: "image" }
+      { url: "/assets/images/IMG_4800_1_3.png", type: "image" },
+      { url: "/assets/images/IMG_3215_3_3.png", type: "image" },
+      { url: "/assets/images/black_hoodie_tracksuit.jpg", type: "image" },
+      { url: "/assets/images/d3_02_garment.jpg", type: "image" }
     ],
     stock: 999
   }

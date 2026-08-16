@@ -5,7 +5,7 @@ import {
   Package, DollarSign, Tag, ExternalLink, 
   MoreVertical, Upload, Loader2, Link as LinkIcon, Target,
   CheckCircle2, XCircle, Clock, X, ChevronLeft, ChevronRight,
-  GripHorizontal
+  GripHorizontal, AlertTriangle
 } from 'lucide-react';
 import { Product, ProductAsset } from '../../types';
 import { MediaRenderer } from '../MediaRenderer';
@@ -59,33 +59,60 @@ export const AdminProductCard: React.FC<AdminProductCardProps> = React.memo(({
     if (!files || files.length === 0) return;
     
     setIsUploading(true);
+    const file = files[0];
     const formData = new FormData();
-    formData.append('image', files[0]);
+    formData.append('image', file);
 
     try {
+      const headers: Record<string, string> = {};
+      const savedPass = localStorage.getItem('d3_admin_password') || sessionStorage.getItem('d3_admin_password');
+      if (savedPass) headers['x-admin-password'] = savedPass;
+
       const response = await fetch('/api/admin/upload', {
         method: 'POST',
+        headers,
         body: formData
       });
 
-      if (!response.ok) throw new Error('UPLOAD_FAILED');
+      if (response.ok) {
+        const results = await response.json();
+        const newAssets: ProductAsset[] = (Array.isArray(results) ? results : [results]).map((r: any) => ({
+          url: r.url,
+          type: r.type || 'image',
+          uid: generateUid()
+        }));
 
-      const results = await response.json();
-      const newAssets: ProductAsset[] = results.map((r: any) => ({
-        url: r.url,
-        type: r.type,
-        uid: generateUid()
-      }));
+        if (newAssets.length > 0) {
+          const currentImages = product.images || [];
+          const updatedImages = [newAssets[0], ...currentImages.slice(1)];
+          await onUpdateProduct(product.id, { 
+            images: updatedImages
+          });
+          return;
+        }
+      }
 
-      if (newAssets.length > 0) {
-        const currentImages = product.images || [];
-        const updatedImages = [newAssets[0], ...currentImages.slice(1)];
-        await onUpdateProduct(product.id, { 
-          images: updatedImages
-        });
+      // Fallback: Firebase Storage
+      try {
+        const { storage, ref, uploadBytes, getDownloadURL } = await import('../../firebase');
+        if (storage) {
+          const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+          const fileRef = ref(storage, `products/cover_${product.id}_${Date.now()}_${safeName}`);
+          await uploadBytes(fileRef, file);
+          const dlUrl = await getDownloadURL(fileRef);
+          if (dlUrl) {
+            const newAsset: ProductAsset = { url: dlUrl, type: 'image', uid: generateUid() };
+            const currentImages = product.images || [];
+            const updatedImages = [newAsset, ...currentImages.slice(1)];
+            await onUpdateProduct(product.id, { images: updatedImages });
+            return;
+          }
+        }
+      } catch (fbErr) {
+        console.warn("Cover firebase upload note:", fbErr);
       }
     } catch (err) {
-      console.error("Cover upload failed:", err);
+      console.warn("Cover upload fallback note:", err);
     } finally {
       setIsUploading(false);
     }
@@ -130,26 +157,57 @@ export const AdminProductCard: React.FC<AdminProductCardProps> = React.memo(({
     }
 
     try {
+      const headers: Record<string, string> = {};
+      const savedPass = localStorage.getItem('d3_admin_password') || sessionStorage.getItem('d3_admin_password');
+      if (savedPass) headers['x-admin-password'] = savedPass;
+
       const response = await fetch('/api/admin/upload', {
         method: 'POST',
+        headers,
         body: formData
       });
 
-      if (!response.ok) throw new Error('UPLOAD_FAILED');
+      if (response.ok) {
+        const results = await response.json();
+        const newAssets: ProductAsset[] = (Array.isArray(results) ? results : [results]).map((r: any) => ({
+          url: r.url,
+          type: r.type || 'image',
+          uid: generateUid()
+        }));
 
-      const results = await response.json();
-      const newAssets: ProductAsset[] = results.map((r: any) => ({
-        url: r.url,
-        type: r.type,
-        uid: generateUid()
-      }));
+        const currentImages = product.images || [];
+        await onUpdateProduct(product.id, { 
+          images: [...currentImages, ...newAssets]
+        });
+        return;
+      }
 
-      const currentImages = product.images || [];
-      await onUpdateProduct(product.id, { 
-        images: [...currentImages, ...newAssets]
-      });
+      // Fallback: Firebase Storage
+      try {
+        const { storage, ref, uploadBytes, getDownloadURL } = await import('../../firebase');
+        if (storage) {
+          const newAssets: ProductAsset[] = [];
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+            const fileRef = ref(storage, `products/${product.id}_${Date.now()}_${i}_${safeName}`);
+            await uploadBytes(fileRef, file);
+            const dlUrl = await getDownloadURL(fileRef);
+            if (dlUrl) {
+              newAssets.push({ url: dlUrl, type: 'image', uid: generateUid() });
+            }
+          }
+          if (newAssets.length > 0) {
+            const currentImages = product.images || [];
+            await onUpdateProduct(product.id, { images: [...currentImages, ...newAssets] });
+            return;
+          }
+        }
+      } catch (fbErr) {
+        console.warn("Upload firebase fallback note:", fbErr);
+      }
     } catch (err) {
-      console.error("Upload failed:", err);
+      console.warn("Upload fallback note:", err);
     } finally {
       setIsUploading(false);
     }
@@ -370,11 +428,19 @@ export const AdminProductCard: React.FC<AdminProductCardProps> = React.memo(({
             fallbackUrl={product.provenanceImage}
             className="w-full h-full object-cover"
           />
-          {product.images && product.images.length > 0 && (
+          {(product.stock ?? 0) === 0 ? (
+            <div className="absolute top-1 left-1 bg-rose-600 text-white text-[7px] font-mono px-1.5 py-0.5 uppercase tracking-wider font-black z-10 shadow-sm flex items-center gap-1">
+              <AlertTriangle size={7} /> OUT OF STOCK
+            </div>
+          ) : (product.stock ?? 0) < 5 ? (
+            <div className="absolute top-1 left-1 bg-amber-500 text-black text-[7px] font-mono px-1.5 py-0.5 uppercase tracking-wider font-bold z-10 shadow-sm flex items-center gap-1">
+              <AlertTriangle size={7} /> LOW: {product.stock}
+            </div>
+          ) : product.images && product.images.length > 0 ? (
             <div className="absolute top-1 left-1 bg-ink text-paper text-[7px] font-mono px-1 py-0.5 uppercase tracking-tighter font-bold z-10">
               UPLOADED
             </div>
-          )}
+          ) : null}
           {product.stripe_payment_link && (
             <div className="absolute top-1 right-1 bg-ink text-paper text-[7px] font-mono px-1 py-0.5 uppercase tracking-tighter font-bold z-10">
               STRIPE LINKED
@@ -586,9 +652,20 @@ export const AdminProductCard: React.FC<AdminProductCardProps> = React.memo(({
 
             {/* Stock */}
             <div className="space-y-1">
-              <label className="text-[8px] font-mono opacity-40 uppercase tracking-widest flex items-center gap-1">
-                <Package size={8} /> STOCK
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-[8px] font-mono opacity-40 uppercase tracking-widest flex items-center gap-1">
+                  <Package size={8} /> STOCK
+                </label>
+                {(product.stock ?? 0) === 0 ? (
+                  <span className="px-1 py-0.2 bg-rose-600 text-white text-[7px] font-mono font-black uppercase tracking-wider flex items-center gap-0.5">
+                    <AlertTriangle size={7} /> OUT
+                  </span>
+                ) : (product.stock ?? 0) < 5 ? (
+                  <span className="px-1 py-0.2 bg-amber-500/20 text-amber-900 border border-amber-500/40 text-[7px] font-mono font-bold uppercase tracking-wider flex items-center gap-0.5">
+                    <AlertTriangle size={7} /> LOW
+                  </span>
+                ) : null}
+              </div>
               {isEditingStock ? (
                 <div className="flex items-center gap-1">
                   <input 
@@ -613,12 +690,29 @@ export const AdminProductCard: React.FC<AdminProductCardProps> = React.memo(({
                   </button>
                 </div>
               ) : (
-                <div 
-                  onClick={() => setIsEditingStock(true)}
-                  className={`font-mono text-xs font-bold cursor-pointer hover:bg-ink/5 p-1 -ml-1 rounded transition-colors flex items-center gap-1 group/stock ${product.stock < 5 ? 'text-ink underline decoration-dotted' : ''}`}
-                >
-                  {product.stock}
-                  <Edit2 size={8} className="opacity-0 group-hover/stock:opacity-20" />
+                <div className="flex items-center gap-1.5">
+                  <div 
+                    onClick={() => setIsEditingStock(true)}
+                    className={`font-mono text-xs font-bold cursor-pointer hover:bg-ink/5 p-1 -ml-1 rounded transition-colors flex items-center gap-1 group/stock ${
+                      (product.stock ?? 0) === 0 
+                        ? 'text-rose-600 font-black' 
+                        : (product.stock ?? 0) < 5 
+                          ? 'text-amber-800 font-black' 
+                          : ''
+                    }`}
+                  >
+                    {product.stock ?? 0} UNITS
+                    <Edit2 size={8} className="opacity-0 group-hover/stock:opacity-20" />
+                  </div>
+                  {(product.stock ?? 0) < 5 && (
+                    <button
+                      onClick={() => onUpdateProduct(product.id, { stock: (product.stock || 0) + 5 })}
+                      className="px-1.5 py-0.5 bg-amber-500/20 hover:bg-amber-500 text-amber-900 hover:text-black font-mono font-bold text-[8px] border border-amber-500/40 transition-colors cursor-pointer"
+                      title="Quick add +5 stock"
+                    >
+                      +5
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -782,7 +876,7 @@ export const AdminProductCard: React.FC<AdminProductCardProps> = React.memo(({
               <AnimatePresence mode="popLayout">
                 {product.images?.map((asset, idx) => (
                   <motion.div 
-                    key={asset.uid || asset.url}
+                    key={`card-thumb-${asset.uid || asset.url || idx}-${idx}`}
                     layout
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}

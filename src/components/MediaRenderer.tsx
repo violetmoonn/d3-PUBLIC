@@ -39,6 +39,13 @@ export const MediaRenderer: React.FC<MediaRendererProps> = ({
   if (formattedUrl && !formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://') && !formattedUrl.startsWith('/')) {
     formattedUrl = '/' + formattedUrl;
   }
+  // Convert local filenames containing spaces or colons to sanitized paths if needed
+  if (formattedUrl && !formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
+    if (formattedUrl.includes(':') || formattedUrl.includes(' ')) {
+      const sanitized = formattedUrl.replace(/ /g, '_').replace(/:/g, '_');
+      formattedUrl = sanitized;
+    }
+  }
 
   const typeFromAsset = typeof asset === 'string' ? undefined : asset?.type;
   
@@ -52,19 +59,28 @@ export const MediaRenderer: React.FC<MediaRendererProps> = ({
     if (isVideoUrl) type = 'video';
   }
 
-  const activeUrl = error ? fallbackUrl : (usedFallback ? fallbackUrl : (formattedUrl || fallbackUrl));
+  const [currentSrc, setCurrentSrc] = useState(formattedUrl || fallbackUrl);
 
   // Reset states when URL changes
   useEffect(() => {
     setError(false);
     setUsedFallback(false);
     setLoading(true);
+    setCurrentSrc(formattedUrl || fallbackUrl);
   }, [formattedUrl]);
 
   const handleError = () => {
-    if (!usedFallback && formattedUrl && formattedUrl !== fallbackUrl) {
-      // Try fallback url first
+    if (currentSrc.startsWith('/assets/images/')) {
+      const uploadAlt = currentSrc.replace('/assets/images/', '/uploads/');
+      setCurrentSrc(uploadAlt);
+      setLoading(true);
+    } else if (currentSrc.startsWith('/uploads/')) {
+      const assetAlt = currentSrc.replace('/uploads/', '/assets/images/');
+      setCurrentSrc(assetAlt);
+      setLoading(true);
+    } else if (!usedFallback && currentSrc !== fallbackUrl) {
       setUsedFallback(true);
+      setCurrentSrc(fallbackUrl);
       setLoading(true);
     } else {
       setError(true);
@@ -78,12 +94,15 @@ export const MediaRenderer: React.FC<MediaRendererProps> = ({
     onValidation?.(true);
   };
 
+  const activeUrl = error ? fallbackUrl : currentSrc;
+
   if (!activeUrl || error) {
     return (
       <div className={`relative ${className} flex flex-col items-center justify-center overflow-hidden bg-ink/5 border border-ink/10`}>
         <img 
           src={fallbackUrl} 
           alt="Product Fallback" 
+          referrerPolicy="no-referrer"
           className="w-full h-full object-cover opacity-80 filter grayscale"
           onLoad={handleLoad}
           onError={() => setError(true)}
@@ -133,6 +152,7 @@ export const MediaRenderer: React.FC<MediaRendererProps> = ({
           key={activeUrl}
           src={activeUrl} 
           alt="Product" 
+          referrerPolicy="no-referrer"
           className={`w-full h-full ${className.includes('object-contain') ? 'object-contain' : 'object-cover'}`} 
           loading="lazy"
           onLoad={handleLoad}

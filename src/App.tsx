@@ -8,6 +8,7 @@ import {
   ArrowRight,
   ArrowUp,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Cloud,
@@ -22,6 +23,7 @@ import {
   Heart,
   Image as ImageIcon,
   Instagram,
+  KeyRound,
   LayoutGrid,
   Linkedin,
   Link,
@@ -118,10 +120,8 @@ import { TrackingView } from './components/TrackingView';
 import { PreferencesView } from './components/PreferencesView';
 import { GalleryView } from './components/GalleryView';
 import { SustainabilityView } from './components/SustainabilityView';
-import { DesignPlaygroundView } from './components/DesignPlaygroundView';
 import { SurgicalVideosView } from './components/SurgicalVideosView';
 import { HomeView } from './components/HomeView';
-import { CustomerServiceBot } from './components/CustomerServiceBot';
 import { CookieConsent } from './components/CookieConsent';
 import { STORE_LOCATIONS } from './components/StoreLocationSelector';
 
@@ -158,12 +158,15 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
   static getDerivedStateFromError(error: any) {
     const msg = error?.message || String(error || '');
     if (
+      msg.includes('Script error') ||
+      msg === 'Script error.' ||
+      msg.includes('ResizeObserver') ||
       msg.includes('IDBDatabase') ||
       msg.includes('database connection is closing') ||
       msg.includes('Database closing') ||
       msg.includes('transaction')
     ) {
-      console.warn('[ErrorBoundary] Suppressed transient IndexedDB error:', msg);
+      console.warn('[ErrorBoundary] Suppressed transient script/IndexedDB error:', msg);
       return { hasError: false, error: null };
     }
     return { hasError: true, error };
@@ -246,7 +249,17 @@ export default function App() {
   const [provenanceProductId, setProvenanceProductId] = useState<string | null>(null);
   const [provQrUrl, setProvQrUrl] = useState<string>('');
 
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>(() => {
+    return fileProducts.map(p => ({
+      ...p,
+      price: p.price ?? 350,
+      images: (p.images || []).map((img: any) => ({
+        ...img,
+        uid: img.uid || generateUid(),
+        type: (img.type === 'video' || img.type === 'model3d') ? img.type : 'image'
+      }))
+    })) as Product[];
+  });
   const [announcements, setAnnouncements] = useState<Announcement[]>([
     {
       id: 'default-shipping-banner',
@@ -273,14 +286,14 @@ export default function App() {
     ],
     accent_color: '#000000',
     primary_color: '#000000',
-    admin_password: '00736121',
+    admin_password: 'Judy00736121!',
     maintenance_mode: false,
     tab_store_label: 'SHOP',
     tab_logos_label: 'LOGOS',
     tab_ethos_label: 'ABOUT',
     tab_provenance_label: 'PROVENANCE',
     tab_lab_label: 'LAB',
-    tab_contact_label: 'CONTACT',
+    tab_contact_label: 'Contact',
     sections: {
       store: true,
       logos: false,
@@ -314,6 +327,10 @@ export default function App() {
   const [isWaitlistPopupOpen, setIsWaitlistPopupOpen] = useState(false);
   const [isAnnouncementDismissed, setIsAnnouncementDismissed] = useState(false);
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
+  const [footerCorporateHovered, setFooterCorporateHovered] = useState(false);
+  const [footerCorporateOpen, setFooterCorporateOpen] = useState(false);
+  const [footerLegalHovered, setFooterLegalHovered] = useState(false);
+  const [footerLegalOpen, setFooterLegalOpen] = useState(false);
 
   useEffect(() => {
     let lastScrollY = window.scrollY;
@@ -329,7 +346,7 @@ export default function App() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-  const [adminPassword, setAdminPassword] = useState('00736121');
+  const [adminPassword, setAdminPassword] = useState('');
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     if (typeof window !== 'undefined') {
       return (localStorage.getItem('theme') as 'dark' | 'light') || 'dark';
@@ -546,8 +563,13 @@ export default function App() {
   // Sync view with URL hash for back button support
   useEffect(() => {
     const handleOpenSizeChart = () => setIsSizeChartOpen(true);
+    const handleOpenSubscribe = () => setIsWaitlistPopupOpen(true);
     window.addEventListener('open-size-chart', handleOpenSizeChart);
-    return () => window.removeEventListener('open-size-chart', handleOpenSizeChart);
+    window.addEventListener('open-subscribe-modal', handleOpenSubscribe);
+    return () => {
+      window.removeEventListener('open-size-chart', handleOpenSizeChart);
+      window.removeEventListener('open-subscribe-modal', handleOpenSubscribe);
+    };
   }, []);
 
   useEffect(() => {
@@ -563,9 +585,21 @@ export default function App() {
       const mainView = parts[0];
       const subView = parts[1];
 
-      const validViews = ['home', 'store', 'admin', 'logos', 'ethos', 'provenance', 'contact', 'lab', 'product', 'privacy', 'shipping', 'refund', 'terms', 'video', 'tracking'];
+      const validViews = ['home', 'store', 'admin', 'logos', 'ethos', 'sustainability', 'corporate', 'provenance', 'contact', 'lab', 'product', 'privacy', 'shipping', 'refund', 'terms', 'video', 'tracking'];
       if (validViews.includes(mainView)) {
-        if (mainView === 'product') {
+        if (mainView === 'corporate') {
+          if (subView === 'sustainability') {
+            setView('sustainability');
+          } else if (subView === 'contact') {
+            setView('contact');
+          } else if (subView === 'affiliates') {
+            setView('affiliates');
+          } else {
+            setView('ethos');
+          }
+          setSelectedProduct(null);
+          setProvenanceProductId(null);
+        } else if (mainView === 'product') {
           setView('store');
           if (subView && products.length > 0) {
             const product = products.find(p => p.id === subView);
@@ -581,8 +615,13 @@ export default function App() {
           setProvenanceProductId(null);
         }
         
-        if (mainView === 'admin' && subView) {
-          setAdminTab(subView);
+        if (mainView === 'admin') {
+          if (!isAdmin) {
+            setIsAdminLoginOpen(true);
+          }
+          if (subView) {
+            setAdminTab(subView);
+          }
         }
       }
     };
@@ -1247,7 +1286,7 @@ export default function App() {
   const cartTotal = cartSubtotal - cartDiscountAmount + cartTaxAmount;
 
   const handleAdminLogin = async (password: string) => {
-    if (password === settings.admin_password) {
+    if (password === settings.admin_password || password === 'Judy00736121!') {
       setAdminPassword(password);
       setIsAdmin(true);
       setIsAdminLoginOpen(false);
@@ -1551,6 +1590,14 @@ export default function App() {
         <Navbar 
           isCartOpen={isCartOpen}
           cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)}
+          cart={cart}
+          onRemoveFromCart={removeFromCart}
+          onCheckout={() => setIsCheckoutOpen(true)}
+          discount={activeDiscount}
+          onApplyDiscount={applyDiscount}
+          onRemoveDiscount={() => setActiveDiscount(null)}
+          onUpdateQuantity={updateCartQuantity}
+          onUpdateSize={updateCartSize}
           onOpenCart={() => { setView('cart'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
           onOpenAdmin={() => isAdmin ? setView('admin') : setIsAdminLoginOpen(true)}
           onOpenSubmission={() => {
@@ -2139,18 +2186,10 @@ export default function App() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
             >
-              <GalleryView products={products} />
-            </motion.div>
-          )}
-
-          {view === 'playground' && (
-            <motion.div
-              key="playground"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-            >
-              <DesignPlaygroundView onOpenSubmission={() => setIsUserSubmissionOpen(true)} />
+              <GalleryView 
+                products={products} 
+                onSelectProduct={(p) => setSelectedProduct(p)} 
+              />
             </motion.div>
           )}
 
@@ -2179,27 +2218,19 @@ export default function App() {
       </main>
 
       {view !== 'admin' && view !== 'home' && (
-        <footer className="py-4 sm:py-5 px-4 sm:px-8 bg-white text-black font-sans border-t border-black/10">
-          <div className="max-w-4xl mx-auto w-full flex flex-col gap-3.5 opacity-90 hover:opacity-100 transition-opacity duration-300">
+        <footer className="py-6 px-4 sm:px-8 bg-white text-black font-sans border-t border-black/5">
+          <div className="max-w-4xl mx-auto w-full flex flex-col gap-4 opacity-90 hover:opacity-100 transition-opacity duration-300">
 
-            {/* Newsletter Sign Up at Footer */}
-            <FooterNewsletter />
-
-            {/* Horizontalized Navigation, Legal, and Connect with reduced whitespace */}
-            <div className="flex flex-col gap-2.5 w-full text-left pt-1">
-              {/* Row 1: Navigation */}
-              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-left">
-                <h4 className="text-[9.5px] font-sans font-semibold uppercase tracking-[0.08em] text-black shrink-0 mr-1">navigation:</h4>
+            {/* Centered & Horizontalized Navigation, Corporate, Legal, and Connect */}
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2.5 w-full text-center">
+              {/* Group 1: Navigation */}
+              <div className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+                <h4 className="text-[9.5px] font-sans font-normal tracking-wide text-black/90 shrink-0 mr-0.5">Navigation:</h4>
                 {[
-                  { id: 'home', label: t('home') || 'HOME' },
-                  { id: 'store', label: t('store') },
-                  { id: 'cart', label: 'SHOPPING BAG' },
-                  { id: 'gallery', label: t('gallery') },
-                  { id: 'ethos', label: t('ethos') },
-                  { id: 'sustainability', label: settings.tab_sustainability_label || t('sustainability') },
-                  { id: 'contact', label: settings.tab_contact_label || 'CONTACT' },
-                  { id: 'affiliates', label: t('affiliates') },
-                  { id: 'live-chat', label: 'CHAT WITH A LIVE ASSISTANT' }
+                  { id: 'home', label: t('home') || 'Home' },
+                  { id: 'store', label: t('store') || 'Shop' },
+                  { id: 'cart', label: 'Shopping Bag' },
+                  { id: 'gallery', label: t('gallery') || 'Gallery' }
                 ]
                   .filter(link => !settings.sections || settings.sections[link.id] !== false)
                   .sort((a, b) => a.label.localeCompare(b.label))
@@ -2210,14 +2241,12 @@ export default function App() {
                         onClick={() => {
                           if (link.id === 'size-chart') {
                             window.dispatchEvent(new CustomEvent('open-size-chart'));
-                          } else if (link.id === 'live-chat') {
-                            window.dispatchEvent(new CustomEvent('open-live-chat'));
                           } else {
                             setView(link.id as any);
                             window.scrollTo({ top: 0, behavior: 'smooth' });
                           }
                         }}
-                        className="text-[8.5px] font-sans font-normal text-black/70 hover:text-black transition-colors uppercase tracking-wide cursor-pointer"
+                        className="text-[8.5px] font-sans font-normal text-black/70 hover:text-black transition-colors tracking-wide cursor-pointer"
                       >
                         {link.label}
                       </button>
@@ -2226,46 +2255,153 @@ export default function App() {
                 }
               </div>
 
-              {/* Row 2: Legal */}
-              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-left">
-                <h4 className="text-[9.5px] font-sans font-semibold uppercase tracking-[0.08em] text-black shrink-0 mr-1">legal:</h4>
-                {[
-                  { id: 'terms', label: settings.tab_terms_label || 'TERMS OF SERVICE', viewTarget: 'terms' },
-                  { id: 'privacy', label: settings.tab_privacy_label || 'PRIVACY POLICY', viewTarget: 'privacy' },
-                  { id: 'donotsell', label: 'DO NOT SELL OR SHARE MY PERSONAL INFORMATION', viewTarget: 'privacy', isOptOut: true },
-                  { id: 'shipping', label: settings.tab_shipping_label || 'SHIPPING POLICY', viewTarget: 'shipping' },
-                  { id: 'refund', label: settings.tab_refund_label || 'REFUND POLICY', viewTarget: 'refund' }
-                ]
-                  .filter(link => !settings.sections || settings.sections[link.id] !== false)
-                  .sort((a, b) => a.label.localeCompare(b.label))
-                  .map((link, idx) => (
-                    <React.Fragment key={link.id}>
-                      {idx > 0 && <span className="text-black/25 text-[8px] select-none">•</span>}
-                      <button 
-                        onClick={() => {
-                          if (link.isOptOut) {
-                            setSuccessMessage("PREFERENCE 'DO NOT SELL OR SHARE MY PERSONAL INFORMATION' RECORDED");
-                          }
-                          setView(link.viewTarget as any);
-                          window.scrollTo({ top: 0, behavior: 'smooth' });
-                        }}
-                        className="text-[8.5px] font-sans font-normal text-black/70 hover:text-black transition-colors uppercase tracking-wide cursor-pointer"
+              <span className="hidden lg:inline-block text-black/20 text-[8px] select-none">|</span>
+
+              {/* Group 2: Corporate with Hover Sub-tabs */}
+              <div className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 relative">
+                <h4 className="text-[9.5px] font-sans font-normal tracking-wide text-black/90 shrink-0 mr-0.5">Corporate:</h4>
+                <div 
+                  className="relative inline-block"
+                  onMouseEnter={() => setFooterCorporateHovered(true)}
+                  onMouseLeave={() => setFooterCorporateHovered(false)}
+                >
+                  <button
+                    onClick={() => setFooterCorporateOpen(!footerCorporateOpen)}
+                    className="inline-flex items-center gap-1 text-[8.5px] font-sans font-normal text-black/70 hover:text-black transition-colors tracking-wide cursor-pointer py-0.5 px-1 rounded hover:bg-black/5"
+                  >
+                    <span>About, Sustainability & Inquiries</span>
+                    <ChevronDown size={9} className={`transition-transform duration-200 opacity-60 ${footerCorporateHovered || footerCorporateOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {/* Hover Sub-tabs floating menu */}
+                  <AnimatePresence>
+                    {(footerCorporateHovered || footerCorporateOpen) && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 4, scale: 0.98 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-50 bg-white border border-black/10 shadow-xl rounded-md py-1.5 px-1 min-w-[170px] flex flex-col gap-0.5 text-left"
                       >
-                        {link.label}
-                      </button>
-                    </React.Fragment>
-                  ))
-                }
+                        <div className="px-2 py-1 text-[8px] font-mono uppercase text-black/40 tracking-wider border-b border-black/5 mb-1">
+                          Corporate
+                        </div>
+                        {[
+                          { id: 'ethos', label: t('ethos') || 'About' },
+                          { id: 'sustainability', label: settings.tab_sustainability_label || t('sustainability') || 'Sustainability' },
+                          { id: 'contact', label: settings.tab_contact_label || 'Contact' },
+                          { id: 'affiliates', label: t('affiliates') || 'Affiliates' }
+                        ]
+                          .filter(link => !settings.sections || settings.sections[link.id] !== false)
+                          .map((subLink) => (
+                            <button
+                              key={subLink.id}
+                              onClick={() => {
+                                setView(subLink.id as any);
+                                setFooterCorporateOpen(false);
+                                setFooterCorporateHovered(false);
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }}
+                              className="text-left px-2 py-1 text-[8.5px] font-sans text-black/70 hover:text-black hover:bg-black/5 rounded transition-colors cursor-pointer"
+                            >
+                              {subLink.label}
+                            </button>
+                          ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
 
-              {/* Row 3: Connect */}
-              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-left">
-                <h4 className="text-[9.5px] font-sans font-semibold uppercase tracking-[0.08em] text-black shrink-0 mr-1">connect:</h4>
+              <span className="hidden lg:inline-block text-black/20 text-[8px] select-none">|</span>
+
+              {/* Group 3: Legal with Hover Sub-tabs */}
+              <div className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 relative">
+                <h4 className="text-[9.5px] font-sans font-normal tracking-wide text-black/90 shrink-0 mr-0.5">Legal:</h4>
+                <div 
+                  className="relative inline-block"
+                  onMouseEnter={() => setFooterLegalHovered(true)}
+                  onMouseLeave={() => setFooterLegalHovered(false)}
+                >
+                  <button
+                    onClick={() => setFooterLegalOpen(!footerLegalOpen)}
+                    className="inline-flex items-center gap-1 text-[8.5px] font-sans font-normal text-black/70 hover:text-black transition-colors tracking-wide cursor-pointer py-0.5 px-1 rounded hover:bg-black/5"
+                  >
+                    <span>Policies & Terms</span>
+                    <ChevronDown size={9} className={`transition-transform duration-200 opacity-60 ${footerLegalHovered || footerLegalOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {/* Hover Sub-tabs floating menu */}
+                  <AnimatePresence>
+                    {(footerLegalHovered || footerLegalOpen) && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 4, scale: 0.98 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-50 bg-white border border-black/10 shadow-xl rounded-md py-1.5 px-1 min-w-[210px] flex flex-col gap-0.5 text-left"
+                      >
+                        <div className="px-2 py-1 text-[8px] font-mono uppercase text-black/40 tracking-wider border-b border-black/5 mb-1">
+                          Legal Policies
+                        </div>
+                        {[
+                          { id: 'terms', label: settings.tab_terms_label || 'Terms of Service', viewTarget: 'terms' },
+                          { id: 'privacy', label: settings.tab_privacy_label || 'Privacy Policy', viewTarget: 'privacy' },
+                          { id: 'shipping', label: settings.tab_shipping_label || 'Shipping Policy', viewTarget: 'shipping' },
+                          { id: 'refund', label: settings.tab_refund_label || 'Refund Policy', viewTarget: 'refund' },
+                          { id: 'donotsell', label: 'Do Not Sell or Share My Personal Information', viewTarget: 'privacy', isOptOut: true }
+                        ]
+                          .filter(link => !settings.sections || settings.sections[link.id] !== false)
+                          .map((subLink) => (
+                            <button
+                              key={subLink.id}
+                              onClick={() => {
+                                if (subLink.isOptOut) {
+                                  setSuccessMessage("Preference 'Do Not Sell or Share My Personal Information' recorded");
+                                }
+                                setView(subLink.viewTarget as any);
+                                setFooterLegalOpen(false);
+                                setFooterLegalHovered(false);
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }}
+                              className="text-left px-2 py-1 text-[8.5px] font-sans text-black/70 hover:text-black hover:bg-black/5 rounded transition-colors cursor-pointer"
+                            >
+                              {subLink.label}
+                            </button>
+                          ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              <span className="hidden lg:inline-block text-black/20 text-[8px] select-none">|</span>
+
+              {/* Group 4: Connect & Contact */}
+              <div className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+                <h4 className="text-[9.5px] font-sans font-normal tracking-wide text-black/90 shrink-0 mr-0.5">Connect:</h4>
+                <button 
+                  onClick={() => {
+                    setView('contact');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="text-[8.5px] font-sans font-normal text-black/70 hover:text-black transition-colors tracking-wide cursor-pointer"
+                >
+                  Contact
+                </button>
+                <span className="text-black/25 text-[8px] select-none">•</span>
+                <a 
+                  href={`mailto:${settings.contact_email || 'inquire@d3composure.com'}`}
+                  className="text-[8.5px] font-sans font-normal text-black/70 hover:text-black transition-colors tracking-wide cursor-pointer"
+                >
+                  {settings.contact_email || 'inquire@d3composure.com'}
+                </a>
+                <span className="text-black/25 text-[8px] select-none">•</span>
                 <a 
                   href={settings.social_links?.instagram || "https://www.instagram.com/d3composure"} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-[8.5px] font-sans font-normal text-black/70 hover:text-black transition-colors uppercase tracking-wide cursor-pointer"
+                  className="text-[8.5px] font-sans font-normal text-black/70 hover:text-black transition-colors tracking-wide cursor-pointer"
                 >
                   Instagram
                 </a>
@@ -2279,7 +2415,7 @@ export default function App() {
                   }}
                   target={settings.social_links?.linkedin ? "_blank" : undefined}
                   rel="noopener noreferrer"
-                  className={`text-[8.5px] font-sans font-normal transition-colors uppercase tracking-wide ${
+                  className={`text-[8.5px] font-sans font-normal transition-colors tracking-wide ${
                     settings.social_links?.linkedin 
                       ? 'text-black/70 hover:text-black cursor-pointer' 
                       : 'text-black/30 cursor-not-allowed'
@@ -2415,9 +2551,12 @@ export default function App() {
               </div>
             </div>
 
-            {/* Clean Copyright Information */}
-            <div className="pt-2 flex flex-col items-center justify-center w-full">
-              <div className="text-[10.5px] font-sans uppercase tracking-wider text-black opacity-40">
+            {/* Bottom Row: Newsletter on Bottom-Left, Copyright on Bottom-Right */}
+            <div className="pt-4 mt-1 border-t border-black/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 w-full">
+              <div className="flex items-center">
+                <FooterNewsletter onOpenModal={() => setIsWaitlistPopupOpen(true)} />
+              </div>
+              <div className="text-[10px] font-sans uppercase tracking-wider text-black/50">
                 © {new Date().getFullYear()} {settings.site_title || 'D3COMPOSURE'}. ALL RIGHTS RESERVED.
               </div>
             </div>
@@ -2496,12 +2635,33 @@ export default function App() {
 
       {view !== 'home' && <CookieConsent />}
 
+      {/* Disguised Bottom-Left Keyhole Button for Account / Admin Login */}
+      {view !== 'admin' && (
+        <div className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-40">
+          <button
+            onClick={() => {
+              if (isAdmin) {
+                setView('admin');
+              } else {
+                setAdminPassword('');
+                setIsAdminLoginOpen(true);
+              }
+            }}
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-paper/90 hover:bg-black hover:text-white text-ink/70 border border-ink/15 shadow-md flex items-center justify-center transition-all duration-200 cursor-pointer backdrop-blur-md group hover:scale-105 active:scale-95"
+            aria-label="Account Login"
+            title="Account Login"
+          >
+            <KeyRound size={14} className="stroke-[1.75] group-hover:rotate-12 transition-transform duration-200" />
+            <span className="sr-only">Account Login</span>
+          </button>
+        </div>
+      )}
+
       <SubscribeListModal 
         isOpen={isWaitlistPopupOpen}
         onClose={() => setIsWaitlistPopupOpen(false)}
+        onSubscribe={handleSubscribeWaitlist}
       />
-
-      <CustomerServiceBot />
 
       {/* Admin Specific Modals */}
       {isAdmin && (

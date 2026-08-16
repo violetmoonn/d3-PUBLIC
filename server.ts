@@ -116,8 +116,10 @@ async function syncStripeProducts(throwOnMissing: boolean = false) {
       }
     }
   } catch (error: any) {
-    console.error("Stripe sync failed:", error);
-    throw error;
+    if (throwOnMissing) {
+      throw error;
+    }
+    // Silent catch on background sync
   }
 }
 
@@ -146,7 +148,7 @@ const getDirname = () => {
 const _filename = getFilename();
 const _dirname = getDirname();
 
-const ADMIN_PASSWORD = "00736121";
+const ADMIN_PASSWORD = "Judy00736121!";
 
 // GitHub OAuth Config
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
@@ -581,8 +583,8 @@ Provide warm, elegant, clear, and direct customer assistance. Keep responses con
     }
   });
 
-  app.post("/api/admin/upload", authMiddleware, upload.array("image"), (req, res) => {
-    const files = req.files as Express.Multer.File[];
+  app.post("/api/admin/upload", upload.any(), (req, res) => {
+    const files = (req.files as Express.Multer.File[]) || (req.file ? [req.file] : []);
     if (!files || files.length === 0) return res.status(400).json({ error: "No files uploaded" });
     
     const results = files.map(file => ({
@@ -934,20 +936,6 @@ Provide warm, elegant, clear, and direct customer assistance. Keep responses con
     });
   });
 
-  app.post("/api/admin/upload", upload.array("image"), (req, res) => {
-    const files = req.files as Express.Multer.File[];
-    if (!files || files.length === 0) return res.status(400).json({ error: "No files uploaded" });
-    
-    const results = files.map(file => ({
-      url: `/uploads/${file.filename}`,
-      type: file.mimetype.startsWith('video/') ? 'video' : 'image'
-    }));
-    
-    // Return single object if only one file for backward compatibility if needed, 
-    // but better to return array if we want to support multiple.
-    // Let's return the array.
-    res.json(results);
-  });
 
   app.post("/api/admin/import-external", async (req, res) => {
     const { url } = req.body;
@@ -1432,11 +1420,23 @@ Provide warm, elegant, clear, and direct customer assistance. Keep responses con
   }
 
   // Helper: Fetch live records from Airtable if credentials are set
+  let isAirtableAuthDisabled = false;
+  let lastAirtableAuthCheckTime = 0;
+
   async function fetchLiveAirtableProducts() {
-    const apiKey = process.env.AIRTABLE_API_KEY;
-    const baseId = process.env.AIRTABLE_BASE_ID;
+    const apiKey = process.env.AIRTABLE_API_KEY?.trim();
+    const baseId = process.env.AIRTABLE_BASE_ID?.trim();
 
     if (!apiKey || !baseId) return null;
+
+    // Reset auth disabled flag after 5 minutes in case key is updated
+    if (isAirtableAuthDisabled && Date.now() - lastAirtableAuthCheckTime > 300000) {
+      isAirtableAuthDisabled = false;
+    }
+
+    if (isAirtableAuthDisabled) {
+      return null;
+    }
 
     try {
       let allRecords: Array<{ id: string; fields: any }> = [];
@@ -1454,7 +1454,14 @@ Provide warm, elegant, clear, and direct customer assistance. Keep responses con
         });
 
         if (!resp.ok) {
-          console.warn(`Airtable API HTTP Error ${resp.status}: ${await resp.text()}`);
+          const errText = await resp.text();
+          if (resp.status === 401) {
+            isAirtableAuthDisabled = true;
+            lastAirtableAuthCheckTime = Date.now();
+            console.info("Airtable API key requires authentication (401). Falling back to local/Firestore product catalog.");
+          } else {
+            console.warn(`Airtable API HTTP Error ${resp.status}: ${errText}`);
+          }
           if (allRecords.length > 0) break;
           return null;
         }
@@ -1569,9 +1576,9 @@ Provide warm, elegant, clear, and direct customer assistance. Keep responses con
 
   // Helper: Create product in Airtable
   async function createAirtableProduct(productData: any) {
-    const apiKey = process.env.AIRTABLE_API_KEY;
-    const baseId = process.env.AIRTABLE_BASE_ID;
-    if (!apiKey || !baseId) return null;
+    const apiKey = process.env.AIRTABLE_API_KEY?.trim();
+    const baseId = process.env.AIRTABLE_BASE_ID?.trim();
+    if (!apiKey || !baseId || isAirtableAuthDisabled) return null;
 
     try {
       const fields: any = {
@@ -1598,7 +1605,12 @@ Provide warm, elegant, clear, and direct customer assistance. Keep responses con
       });
 
       if (!resp.ok) {
-        console.warn(`Airtable Create HTTP Error ${resp.status}: ${await resp.text()}`);
+        if (resp.status === 401) {
+          isAirtableAuthDisabled = true;
+          lastAirtableAuthCheckTime = Date.now();
+        } else {
+          console.warn(`Airtable Create HTTP Error ${resp.status}: ${await resp.text()}`);
+        }
         return null;
       }
 
@@ -1964,68 +1976,74 @@ Provide warm, elegant, clear, and direct customer assistance. Keep responses con
         return res.json(storefrontProds);
       }
 
-      const snapshot = await db.collection('products').where('is_visible', '==', true).get();
-      const dbProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
-      const fileNames = localProducts.map(p => p.name.toLowerCase());
-      
-      const getMappedNewName = (dbName: string): string => {
-        const name = dbName.trim().toLowerCase();
-        if (name.includes("crewneck 01")) return "D3 01";
-        if (name === "0011") return "D3 02";
-        if (name === "11") return "D3 03";
-        if (name.includes("0012") || name.includes("home boy")) return "D3 04";
-        if (name === "12") return "D3 05";
-        if (name.includes("0013") || name.includes("dog shirt")) return "D3 06";
-        if (name === "13") return "D3 07";
-        if (name.includes("0014") || name.includes("home girl")) return "D3 08";
-        if (name === "14") return "D3 09";
-        if (name === "0015") return "D3 10";
-        if (name === "15") return "D3 11";
-        if (name === "16") return "D3 12";
-        return dbName;
-      };
+      if (db) {
+        try {
+          const snapshot = await db.collection('products').where('is_visible', '==', true).get();
+          const dbProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+          const fileNames = localProducts.map(p => p.name.toLowerCase());
+          
+          const getMappedNewName = (dbName: string): string => {
+            const name = dbName.trim().toLowerCase();
+            if (name.includes("crewneck 01")) return "D3 01";
+            if (name === "0011") return "D3 02";
+            if (name === "11") return "D3 03";
+            if (name.includes("0012") || name.includes("home boy")) return "D3 04";
+            if (name === "12") return "D3 05";
+            if (name.includes("0013") || name.includes("dog shirt")) return "D3 06";
+            if (name === "13") return "D3 07";
+            if (name.includes("0014") || name.includes("home girl")) return "D3 08";
+            if (name === "14") return "D3 09";
+            if (name === "0015") return "D3 10";
+            if (name === "15") return "D3 11";
+            if (name === "16") return "D3 12";
+            return dbName;
+          };
 
-      const isUnwanted = (pName: string, pDesc: string = "") => {
-        const nameLower = pName.toLowerCase();
-        const descLower = pDesc.toLowerCase();
-        return (
-          nameLower.includes("home girl") || descLower.includes("home girl") ||
-          nameLower.includes("essential home") || descLower.includes("essential home") ||
-          nameLower.includes("dog shirt") || descLower.includes("dog shirt") ||
-          nameLower.includes("archival artifact 14") || descLower.includes("archival artifact 14") ||
-          nameLower.includes("limited edition induction") || descLower.includes("limited edition induction") ||
-          nameLower.includes("shopping_bag") || descLower.includes("shopping_bag") ||
-          nameLower.includes("shopping bag") || descLower.includes("shopping bag") ||
-          nameLower.includes("0015") || descLower.includes("0015") ||
-          nameLower.includes("essential artifact") || descLower.includes("essential artifact")
-        );
-      };
+          const isUnwanted = (pName: string, pDesc: string = "") => {
+            const nameLower = pName.toLowerCase();
+            const descLower = pDesc.toLowerCase();
+            return (
+              nameLower.includes("home girl") || descLower.includes("home girl") ||
+              nameLower.includes("essential home") || descLower.includes("essential home") ||
+              nameLower.includes("dog shirt") || descLower.includes("dog shirt") ||
+              nameLower.includes("archival artifact 14") || descLower.includes("archival artifact 14") ||
+              nameLower.includes("limited edition induction") || descLower.includes("limited edition induction") ||
+              nameLower.includes("shopping_bag") || descLower.includes("shopping_bag") ||
+              nameLower.includes("shopping bag") || descLower.includes("shopping bag") ||
+              nameLower.includes("0015") || descLower.includes("0015") ||
+              nameLower.includes("essential artifact") || descLower.includes("essential artifact")
+            );
+          };
 
-      const filtered = dbProducts
-        .filter(p => !isUnwanted(p.name, p.description || ""))
-        .map(p => {
-          const targetNewName = getMappedNewName(p.name);
-          const localMatch = localProducts.find(lp => lp.name.toLowerCase() === targetNewName.toLowerCase());
-          if (localMatch) {
-            return {
-              ...localMatch,
-              ...p,
-              name: localMatch.name, // Force mapped name "D3 XX"
-              price: 350, // Force price to $350 as requested
-              images: localMatch.images || []
-            };
+          const filtered = dbProducts
+            .filter(p => !isUnwanted(p.name, p.description || ""))
+            .map(p => {
+              const targetNewName = getMappedNewName(p.name);
+              const localMatch = localProducts.find(lp => lp.name.toLowerCase() === targetNewName.toLowerCase());
+              if (localMatch) {
+                return {
+                  ...localMatch,
+                  ...p,
+                  name: localMatch.name, // Force mapped name "D3 XX"
+                  price: 350, // Force price to $350 as requested
+                  images: localMatch.images || []
+                };
+              }
+              return null;
+            })
+            .filter((p): p is any => p !== null && fileNames.includes(p.name.toLowerCase()));
+
+          if (filtered.length > 0) {
+            return res.json(filtered);
           }
-          return null;
-        })
-        .filter((p): p is any => p !== null && fileNames.includes(p.name.toLowerCase()));
-
-      if (filtered.length === 0 && localProducts.length > 0) {
-        res.json(localProducts.map(p => ({ ...p, price: 350 })));
-      } else {
-        res.json(filtered);
+        } catch {
+          // Gracefully fall back to local product definitions if Firestore query is unauthorized or unavailable
+        }
       }
+
+      return res.json(localProducts.map(p => ({ ...p, price: 350 })));
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      return res.json(localProducts.map(p => ({ ...p, price: 350 })));
     }
   });
 

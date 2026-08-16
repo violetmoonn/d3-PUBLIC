@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2, Lock, LogIn, ShieldCheck, User, X } from 'lucide-react';
+import { Loader2, KeyRound, LogIn, User, X } from 'lucide-react';
 
 interface AdminLoginModalProps {
   isOpen: boolean;
@@ -44,67 +44,83 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="bg-paper border border-ink/5 w-full max-w-md overflow-hidden relative shadow-2xl"
+            className="bg-paper border border-ink/10 w-full max-w-md overflow-hidden relative shadow-2xl rounded-lg"
           >
             <button
               onClick={onClose}
-              className="absolute top-6 right-6 z-10 p-2 hover:bg-ink hover:text-paper transition-all"
+              className="absolute top-5 right-5 z-10 p-2 hover:bg-ink hover:text-paper transition-all rounded cursor-pointer"
+              aria-label="Close"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
 
-            <div className="p-8 sm:p-12">
-              <div className="mb-12 text-center">
-                <div className="w-16 h-16 bg-ink text-paper flex items-center justify-center mx-auto mb-6">
-                  <ShieldCheck size={32} />
+            <div className="p-8 sm:p-10">
+              <div className="mb-8 text-center">
+                <div className="w-14 h-14 bg-ink text-paper rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
+                  <KeyRound size={24} className="stroke-[1.75]" />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-[0.4em] opacity-30 mb-2 block">SECURE ACCESS</span>
-                <h2 className="text-4xl font-display tracking-tighter">ADMIN LOGIN</h2>
-                <p className="text-xs font-mono uppercase opacity-40 mt-4 leading-relaxed">Enter credentials to access the admin control center.</p>
+                <span className="text-[10px] font-mono font-medium uppercase tracking-[0.25em] text-ink/50 mb-1.5 block">
+                  CLIENT & MEMBER ACCESS
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-display font-semibold tracking-tight text-ink">
+                  ACCOUNT LOGIN
+                </h2>
+                <p className="text-[12px] font-sans text-ink/60 mt-2 leading-relaxed">
+                  Sign in with your credentials or access key to manage your account.
+                </p>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-mono font-bold uppercase tracking-widest opacity-40">PASSWORD</label>
-                    <span className="text-[9px] font-mono opacity-50 text-ink">PIN: 00736121</span>
-                  </div>
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="space-y-1.5 text-left">
+                  <label className="text-[10px] font-mono font-medium uppercase tracking-wider text-ink/70">
+                    ACCESS KEY / PASSWORD
+                  </label>
                   <div className="relative">
-                    <Lock size={14} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30" />
+                    <KeyRound size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink/40 stroke-[1.5]" />
                     <input 
                       required
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="ENTER PASSWORD (00736121)"
-                      className="w-full bg-ink/5 border border-ink/10 p-4 pl-12 text-[11px] font-mono focus:ring-0 focus:border-ink/30 transition-all placeholder:opacity-40"
+                      placeholder="Enter your access key..."
+                      autoFocus
+                      className="w-full bg-ink/5 border border-ink/15 rounded-md p-3.5 pl-10 text-[12px] font-mono text-ink focus:outline-none focus:border-ink transition-all placeholder:text-ink/30"
                     />
                   </div>
                 </div>
 
                 <button 
                   type="submit"
-                  disabled={isLoading}
-                  className="w-full bg-ink text-paper py-5 text-[12px] font-mono font-bold uppercase tracking-[0.3em] flex items-center justify-center gap-3 hover:bg-zinc-800 transition-all disabled:opacity-50 group"
+                  disabled={isLoading || !password}
+                  className="w-full bg-ink text-paper py-3.5 text-[11px] font-mono font-medium uppercase tracking-[0.2em] rounded-md flex items-center justify-center gap-2 hover:bg-ink/80 transition-all disabled:opacity-40 cursor-pointer shadow-sm group"
                 >
-                  {isLoading ? <Loader2 className="animate-spin" size={18} /> : <LogIn size={18} className="group-hover:translate-x-1 transition-transform" />}
-                  LOGIN
+                  {isLoading ? (
+                    <Loader2 className="animate-spin" size={16} />
+                  ) : (
+                    <>
+                      <span>SIGN IN</span>
+                      <LogIn size={15} className="group-hover:translate-x-0.5 transition-transform stroke-[1.5]" />
+                    </>
+                  )}
                 </button>
               </form>
 
-              <div className="mt-8 pt-8 border-t border-ink/5 space-y-4">
-                <p className="text-[10px] font-mono font-bold uppercase tracking-widest opacity-40 text-center">OR CONTINUE WITH</p>
+              <div className="mt-6 pt-6 border-t border-ink/10 space-y-3">
+                <p className="text-[9px] font-mono font-medium uppercase tracking-widest text-ink/40 text-center">
+                  OR CONTINUE WITH
+                </p>
                 <button 
+                  type="button"
                   onClick={onGoogleLogin}
-                  className="w-full bg-paper border border-ink/10 text-ink py-5 text-[12px] font-mono font-bold uppercase tracking-[0.3em] flex items-center justify-center gap-3 hover:bg-ink hover:text-paper transition-all group"
+                  className="w-full bg-paper border border-ink/15 text-ink py-3 text-[11px] font-mono font-medium uppercase tracking-wider rounded-md flex items-center justify-center gap-2.5 hover:bg-ink/5 transition-all cursor-pointer group"
                 >
-                  <User size={18} className="group-hover:scale-110 transition-transform" />
-                  GOOGLE LOGIN
+                  <User size={15} className="group-hover:scale-110 transition-transform stroke-[1.5]" />
+                  CONTINUE WITH GOOGLE
                 </button>
               </div>
 
-              <p className="mt-12 text-[8px] font-mono uppercase text-center opacity-20 leading-relaxed">
-                * Unauthorized access attempts are logged and reported.
+              <p className="mt-8 text-[9px] font-mono uppercase text-center text-ink/30 leading-relaxed">
+                * 256-BIT ENCRYPTED CLIENT PORTAL
               </p>
             </div>
           </motion.div>

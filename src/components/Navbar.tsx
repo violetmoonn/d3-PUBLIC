@@ -1,8 +1,9 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown, Globe, LayoutGrid, Menu, MonitorPlay, Moon, ShoppingBag, Sun, User, X, Plus, Clock, Search } from 'lucide-react';
-import { AppSettings } from '../types';
+import { AppSettings, CartItem, DiscountCode } from '../types';
 import { getMathematicalFontSize, getMathematicalLetterTracking, t } from '../utils/helpers';
+import { CartReceiptDropdown } from './CartReceiptDropdown';
 
 const RECENT_SEARCHES_KEY = 'd3_recent_searches';
 
@@ -17,6 +18,14 @@ interface NavbarProps {
   isCartOpen?: boolean;
   cartCount: number;
   onOpenCart: () => void;
+  cart?: CartItem[];
+  onRemoveFromCart?: (id: string | number, size: string) => void;
+  onCheckout?: () => void;
+  discount?: DiscountCode | null;
+  onApplyDiscount?: (code: string) => void;
+  onRemoveDiscount?: () => void;
+  onUpdateQuantity?: (id: string | number, size: string, quantity: number) => void;
+  onUpdateSize?: (id: string | number, oldSize: string, newSize: string) => void;
   onOpenAdmin: () => void;
   onOpenSubmission: () => void;
   isAdmin: boolean;
@@ -37,6 +46,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   isCartOpen = false,
   cartCount, 
   onOpenCart, 
+  cart = [],
+  onRemoveFromCart,
+  onCheckout,
+  discount = null,
+  onApplyDiscount,
+  onRemoveDiscount,
+  onUpdateQuantity,
+  onUpdateSize,
   onOpenAdmin, 
   onOpenSubmission,
   isAdmin, 
@@ -58,6 +75,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isSearchOpen, setIsSearchOpen] = React.useState(false);
   const [isCustomerCareOpen, setIsCustomerCareOpen] = React.useState(false);
   const [isLogoMenuOpen, setIsLogoMenuOpen] = React.useState(false);
+  const [isCorporateHovered, setIsCorporateHovered] = React.useState(false);
+  const [isCorporateOpen, setIsCorporateOpen] = React.useState(false);
+  const [isLegalHovered, setIsLegalHovered] = React.useState(false);
+  const [isLegalOpen, setIsLegalOpen] = React.useState(false);
+  const [isReceiptOpen, setIsReceiptOpen] = React.useState(false);
 
   const [recentSearches, setRecentSearches] = React.useState<string[]>(() => {
     try {
@@ -134,27 +156,29 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, []);
 
   const primaryLinks = [
-    { id: 'home', label: t('home') || 'HOME' },
-    { id: 'store', label: t('store') },
-    { id: 'playground', label: t('playground') || 'PLAYGROUND' },
-    { id: 'gallery', label: t('gallery') },
-    { id: 'ethos', label: t('ethos') },
-    { id: 'sustainability', label: settings.tab_sustainability_label || t('sustainability') },
+    { id: 'home', label: t('home') || 'Home' },
+    { id: 'store', label: t('store') || 'Shop' },
+    { id: 'gallery', label: t('gallery') || 'Gallery' },
   ].filter(link => !settings.sections || settings.sections[link.id] !== false);
 
-  const customerCareLinks = [
-    { id: 'shipping', label: settings.tab_shipping_label || 'SHIPPING POLICY' },
-    { id: 'privacy', label: settings.tab_privacy_label || 'PRIVACY POLICY' },
-    { id: 'refund', label: settings.tab_refund_label || 'REFUND POLICY' },
-    { id: 'contact', label: settings.tab_contact_label || 'CONTACT' },
-    { id: 'affiliates', label: t('affiliates') },
-    { id: 'live-chat', label: 'CHAT WITH A LIVE ASSISTANT' }
+  const corporateLinks = [
+    { id: 'ethos', label: t('ethos') || 'About' },
+    { id: 'sustainability', label: settings.tab_sustainability_label || t('sustainability') || 'Sustainability' },
+    { id: 'contact', label: settings.tab_contact_label || 'Contact' },
+    { id: 'affiliates', label: t('affiliates') || 'Affiliates' }
+  ].filter(link => !settings.sections || settings.sections[link.id] !== false);
+
+  const legalLinks = [
+    { id: 'terms', label: settings.tab_terms_label || 'Terms of Service' },
+    { id: 'privacy', label: settings.tab_privacy_label || 'Privacy Policy' },
+    { id: 'shipping', label: settings.tab_shipping_label || 'Shipping Policy' },
+    { id: 'refund', label: settings.tab_refund_label || 'Refund Policy' },
   ].filter(link => !settings.sections || settings.sections[link.id] !== false);
 
   return (
     <>
       <header 
-        className={`fixed left-0 right-0 z-[60] bg-white text-black border-b border-black/10 shadow-sm transition-all duration-500 ${
+        className={`fixed left-0 right-0 z-[60] bg-white text-black shadow-sm transition-all duration-500 ${
           hasAnnouncements ? 'top-0 sm:top-[38px]' : 'top-0'
         } ${
           isScrolled ? 'opacity-0 pointer-events-none -translate-y-full' : 'opacity-100 translate-y-0'
@@ -162,20 +186,20 @@ export const Navbar: React.FC<NavbarProps> = ({
       >
         <div className="max-w-[1440px] mx-auto w-full px-4 sm:px-6 md:px-8 h-14 sm:h-16 flex items-center justify-between relative select-none">
           {/* Top Left Corner Controls: THREE LINES MENU & SEARCH */}
-          <div className="flex items-center gap-3.5 font-sans text-[12px] sm:text-[10.5px] font-semibold tracking-wider text-black leading-none">
+          <div className="flex items-center gap-3.5 font-sans text-[12px] sm:text-[11px] font-normal text-black leading-none">
             <button 
               onClick={() => {
                 setIsMobileMenuOpen(!isMobileMenuOpen);
                 if (isSearchOpen) setIsSearchOpen(false);
               }}
-              className="hover:opacity-50 transition-opacity uppercase focus:outline-none flex items-center justify-center cursor-pointer text-black"
-              aria-label={isMobileMenuOpen ? (t('close') || 'CLOSE') : (t('menu') || 'MENU')}
-              title={isMobileMenuOpen ? (t('close') || 'CLOSE') : (t('menu') || 'MENU')}
+              className="hover:opacity-50 transition-opacity focus:outline-none flex items-center justify-center cursor-pointer text-black"
+              aria-label={isMobileMenuOpen ? (t('close') || 'Back') : (t('menu') || 'Menu')}
+              title={isMobileMenuOpen ? (t('close') || 'Back') : (t('menu') || 'Menu')}
             >
               {isMobileMenuOpen ? (
-                <X className="w-4 h-4 stroke-[2.25]" />
+                <X className="w-4 h-4 stroke-[1.5]" />
               ) : (
-                <Menu className="w-4 h-4 stroke-[2.25]" />
+                <Menu className="w-4 h-4 stroke-[1.5]" />
               )}
             </button>
 
@@ -184,12 +208,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                 setIsSearchOpen(!isSearchOpen);
                 if (isMobileMenuOpen) setIsMobileMenuOpen(false);
               }}
-              className="hover:opacity-50 transition-opacity uppercase focus:outline-none flex items-center gap-1.5 cursor-pointer text-black text-[12px] sm:text-[10.5px]"
-              aria-label={t('search') || 'SEARCH'}
-              title={t('search') || 'SEARCH'}
+              className="hover:opacity-50 transition-opacity focus:outline-none flex items-center gap-1.5 cursor-pointer text-black text-[12px] sm:text-[11px]"
+              aria-label={t('search') || 'Search'}
+              title={t('search') || 'Search'}
             >
-              <Search className="w-4 h-4 sm:hidden stroke-[2.25]" />
-              <span className="hidden sm:inline">SEARCH</span>
+              <Search className="w-4 h-4 sm:hidden stroke-[1.5]" />
+              <span className="hidden sm:inline">Search</span>
             </button>
           </div>
 
@@ -205,34 +229,77 @@ export const Navbar: React.FC<NavbarProps> = ({
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               style={{ 
-                fontSize: 'clamp(18px, 2.8vw, 32px)',
-                fontFamily: '"Arial Black", "Impact", "Anton", sans-serif',
-                letterSpacing: '-0.035em',
-                fontWeight: 900,
-                color: '#000000'
+                fontSize: 'clamp(14px, 1.8vw, 19px)',
+                fontFamily: '"Arial", "Helvetica Neue", Helvetica, sans-serif',
+                letterSpacing: '0.12em',
+                fontWeight: 600,
+                color: '#111111'
               }}
-              className="font-black uppercase shrink-0 px-2 py-0.5 relative text-center leading-none select-none cursor-pointer hover:opacity-80 transition-opacity focus:outline-none"
+              className="uppercase shrink-0 px-2 py-0.5 relative text-center leading-none select-none cursor-pointer opacity-85 hover:opacity-100 transition-opacity focus:outline-none tracking-widest"
               title={settings.site_title || 'D3COMPOSURE'}
+              aria-label={settings.site_title || 'D3COMPOSURE'}
+              id="navbar-d3composure-brand-btn"
             >
               {(settings.site_title ? settings.site_title.replace(/_/g, ' ') : 'D3COMPOSURE')}
             </button>
           </div>
 
-          {/* Top Right Controls: SHOPPING BAG (n) */}
-          <div className="flex items-center gap-3">
+          {/* Top Right Controls: SHOPPING BAG (n) + DROPDOWN RECEIPT */}
+          <div className="flex items-center gap-3 relative" id="navbar-shopping-bag-container">
             <button
-              onClick={onOpenCart}
-              className="hover:opacity-50 transition-opacity uppercase focus:outline-none flex items-center gap-1.5 relative cursor-pointer text-black font-sans text-[12px] sm:text-[10.5px] font-semibold tracking-wider leading-none"
-              title={t('checkout_bag')}
-              aria-label={t('checkout_bag')}
+              onClick={() => {
+                setIsReceiptOpen(prev => !prev);
+              }}
+              className="hover:opacity-50 transition-opacity focus:outline-none flex items-center gap-1.5 relative cursor-pointer text-black font-sans text-[12px] sm:text-[11px] font-normal leading-none"
+              title={t('checkout_bag') || 'Shopping Bag'}
+              aria-label={t('checkout_bag') || 'Shopping Bag'}
               id="shopping-bag-btn"
             >
               <div className="sm:hidden flex items-center gap-1">
-                <ShoppingBag className="w-4 h-4 stroke-[2.25]" />
-                <span className="text-[11px] font-mono font-bold leading-none">({cartCount})</span>
+                <ShoppingBag className="w-4 h-4 stroke-[1.5]" />
+                {cartCount > 0 && (
+                  <span className="text-[11px] font-mono font-medium leading-none">({cartCount})</span>
+                )}
               </div>
-              <span className="hidden sm:inline">SHOPPING BAG ({cartCount})</span>
+              <span className="hidden sm:inline">
+                Shopping Bag{cartCount > 0 ? ` (${cartCount})` : ''}
+              </span>
             </button>
+
+            {/* Dropdown Receipt-Like Form */}
+            <CartReceiptDropdown 
+              isOpen={isReceiptOpen}
+              onClose={() => setIsReceiptOpen(false)}
+              items={cart}
+              onRemove={(id, size) => {
+                if (onRemoveFromCart) onRemoveFromCart(id, size);
+              }}
+              onCheckout={() => {
+                setIsReceiptOpen(false);
+                if (onCheckout) onCheckout();
+              }}
+              discount={discount}
+              onApplyDiscount={(code) => {
+                if (onApplyDiscount) onApplyDiscount(code);
+              }}
+              onRemoveDiscount={onRemoveDiscount}
+              onUpdateQuantity={(id, size, qty) => {
+                if (onUpdateQuantity) onUpdateQuantity(id, size, qty);
+              }}
+              onUpdateSize={(id, oldSize, newSize) => {
+                if (onUpdateSize) onUpdateSize(id, oldSize, newSize);
+              }}
+              onNavigateToCart={() => {
+                setIsReceiptOpen(false);
+                onNavigate('cart');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onNavigateToStore={() => {
+                setIsReceiptOpen(false);
+                onNavigate('store');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
           </div>
         </div>
       </header>
@@ -250,91 +317,16 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="fixed inset-0 bg-black/40 backdrop-blur-xs z-[65] pointer-events-auto"
             />
 
-            {/* Centered Menu Drawer / Overlay */}
+            {/* Vertical banner on left half of screen */}
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: -10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -10 }}
-              transition={{ type: 'spring', damping: 28, stiffness: 350 }}
-              className="menu-drawer font-sans fixed left-1/2 top-16 sm:top-20 -translate-x-1/2 z-[70] w-[280px] sm:w-[320px] max-w-[90vw] max-h-[82vh] bg-paper border border-ink/15 shadow-2xl rounded-xl flex flex-col justify-between p-5 overflow-y-auto pointer-events-auto text-center"
+              initial={{ x: '-100%' }}
+              animate={{ x: '0%' }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 320 }}
+              className="menu-drawer font-sans fixed left-0 top-0 bottom-0 z-[70] w-[250px] sm:w-[290px] max-w-[85vw] h-full bg-paper shadow-2xl flex flex-col justify-between p-4 sm:p-5 overflow-y-auto pointer-events-auto"
             >
               <div>
-                {/* Search Bar inside Menu */}
-                <div className="relative mb-4 pb-2 border-b border-ink/10">
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="font-mono text-[10px] font-bold tracking-[0.2em] text-ink shrink-0">SEARCH:</span>
-                    <div className="flex-1 relative">
-                      <input
-                        type="text"
-                        value={searchTerm}
-                        onChange={(e) => {
-                          onSearchChange(e.target.value);
-                          if (currentView !== 'store') {
-                            onNavigate('store');
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && searchTerm.trim()) {
-                            addRecentSearch(searchTerm);
-                          }
-                        }}
-                        placeholder=""
-                        className="w-full bg-transparent text-xs font-mono tracking-[0.15em] text-ink focus:outline-none pb-1 uppercase transition-colors border-b border-ink/20 focus:border-ink text-center"
-                      />
-                      {searchTerm && (
-                        <button
-                          onClick={() => onSearchChange('')}
-                          className="absolute right-0 top-1/2 -translate-y-1/2 p-0.5 text-ink/40 hover:text-ink transition-colors cursor-pointer"
-                          aria-label="Clear search"
-                        >
-                          <X size={12} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Recent Searches in Drawer */}
-                  {recentSearches.length > 0 && (
-                    <div className="mt-2.5 font-mono text-[9px] uppercase tracking-wider">
-                      <div className="flex items-center justify-between text-ink/40 mb-1">
-                        <span className="flex items-center gap-1"><Clock size={9} /> RECENT</span>
-                        <button 
-                          onClick={clearRecentSearches}
-                          className="hover:text-ink transition-colors cursor-pointer text-[8.5px]"
-                        >
-                          CLEAR
-                        </button>
-                      </div>
-                      <div className="flex flex-wrap items-center justify-center gap-1">
-                        {recentSearches.map((term) => (
-                          <span
-                            key={term}
-                            className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-ink/5 hover:bg-ink/10 text-ink/80 hover:text-ink rounded-none cursor-pointer transition-colors group"
-                          >
-                            <span onClick={() => {
-                              handleSelectRecentSearch(term);
-                              setIsMobileMenuOpen(false);
-                            }}>
-                              {term}
-                            </span>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removeRecentSearch(term);
-                              }}
-                              className="text-ink/30 hover:text-ink transition-colors"
-                              title="Remove"
-                            >
-                              <X size={9} />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Navigation Links - Clean Center Aligned */}
+                {/* Navigation Links - Clean SSENSE Sans-Serif Font */}
                 <div className="space-y-1.5 mb-4">
                   {primaryLinks.map(link => (
                     <a 
@@ -349,44 +341,174 @@ export const Navbar: React.FC<NavbarProps> = ({
                         }
                         setIsMobileMenuOpen(false); 
                       }}
-                      className={`block w-full text-center font-sans text-[13px] tracking-wide uppercase transition-all py-1.5 px-2 rounded hover:bg-ink/5 ${
-                        currentView === link.id ? 'text-ink font-extrabold bg-ink/5' : 'text-ink/70 hover:text-ink font-medium'
+                      className={`block w-full text-left font-sans text-[13px] tracking-wide transition-all py-1 px-1.5 rounded hover:bg-ink/5 ${
+                        currentView === link.id ? 'text-ink font-semibold bg-ink/5' : 'text-ink/70 hover:text-ink font-normal'
                       }`}
                     >
                       {link.label}
                     </a>
                   ))}
 
-                  <div className="my-2 border-t border-ink/10 pt-1" />
+                  {/* Merged Corporate Item with Hover / Expandable Sub-tabs */}
+                  {corporateLinks.length > 0 && (
+                    <div 
+                      className="relative group/corporate pt-0.5"
+                      onMouseEnter={() => setIsCorporateHovered(true)}
+                      onMouseLeave={() => setIsCorporateHovered(false)}
+                    >
+                      <button
+                        onClick={() => setIsCorporateOpen(!isCorporateOpen)}
+                        className={`flex items-center justify-between w-full text-left font-sans text-[13px] tracking-wide transition-all py-1 px-1.5 rounded hover:bg-ink/5 cursor-pointer ${
+                          ['ethos', 'sustainability', 'contact', 'affiliates'].includes(currentView) ? 'text-ink font-semibold bg-ink/5' : 'text-ink/70 hover:text-ink font-normal'
+                        }`}
+                      >
+                        <span>Corporate</span>
+                        <ChevronDown 
+                          size={12} 
+                          className={`transition-transform duration-200 opacity-60 ${
+                            isCorporateHovered || isCorporateOpen ? 'rotate-180' : ''
+                          }`} 
+                        />
+                      </button>
 
-                  {customerCareLinks.map(link => (
-                    <a 
-                      key={link.id}
-                      href={`#${link.id}`}
-                      onClick={(e) => { 
-                        e.preventDefault(); 
-                        if (link.id === 'live-chat') {
-                          window.dispatchEvent(new CustomEvent('open-live-chat'));
-                        } else {
-                          onNavigate(link.id); 
-                        }
-                        setIsMobileMenuOpen(false); 
+                      {/* Sub-tabs container */}
+                      <AnimatePresence>
+                        {(isCorporateHovered || isCorporateOpen) && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.15 }}
+                            className="pl-3 py-1 space-y-1 border-l border-ink/15 ml-2 mt-0.5 overflow-hidden"
+                          >
+                            {corporateLinks.map(subLink => (
+                              <a
+                                key={subLink.id}
+                                href={`#${subLink.id}`}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  onNavigate(subLink.id);
+                                  setIsMobileMenuOpen(false);
+                                  setIsCorporateOpen(false);
+                                }}
+                                className={`block w-full text-left font-sans text-[12px] tracking-wide py-0.5 px-1 rounded transition-colors ${
+                                  currentView === subLink.id
+                                    ? 'text-ink font-medium bg-ink/5'
+                                    : 'text-ink/60 hover:text-ink'
+                                }`}
+                              >
+                                {subLink.label}
+                              </a>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )}
+
+                  {/* Merged Legal Item with Hover / Expandable Sub-tabs directly below Corporate */}
+                  {legalLinks.length > 0 && (
+                    <div 
+                      className="relative group/legal pt-0.5"
+                      onMouseEnter={() => setIsLegalHovered(true)}
+                      onMouseLeave={() => setIsLegalHovered(false)}
+                    >
+                      <button
+                        onClick={() => setIsLegalOpen(!isLegalOpen)}
+                        className={`flex items-center justify-between w-full text-left font-sans text-[13px] tracking-wide transition-all py-1 px-1.5 rounded hover:bg-ink/5 cursor-pointer ${
+                          ['privacy', 'shipping', 'refund', 'terms'].includes(currentView) ? 'text-ink font-semibold bg-ink/5' : 'text-ink/70 hover:text-ink font-normal'
+                        }`}
+                      >
+                        <span>Legal</span>
+                        <ChevronDown 
+                          size={12} 
+                          className={`transition-transform duration-200 opacity-60 ${
+                            isLegalHovered || isLegalOpen ? 'rotate-180' : ''
+                          }`} 
+                        />
+                      </button>
+
+                      {/* Sub-tabs container */}
+                      <AnimatePresence>
+                        {(isLegalHovered || isLegalOpen) && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.15 }}
+                            className="pl-3 py-1 space-y-1 border-l border-ink/15 ml-2 mt-0.5 overflow-hidden"
+                          >
+                            {legalLinks.map(subLink => (
+                              <a
+                                key={subLink.id}
+                                href={`#${subLink.id}`}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  onNavigate(subLink.id);
+                                  setIsMobileMenuOpen(false);
+                                  setIsLegalOpen(false);
+                                }}
+                                className={`block w-full text-left font-sans text-[11px] tracking-wide py-0.5 px-1 rounded transition-colors ${
+                                  currentView === subLink.id
+                                    ? 'text-ink font-medium'
+                                    : 'text-ink/60 hover:text-ink'
+                                }`}
+                              >
+                                {subLink.label}
+                              </a>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )}
+
+                  {/* Newsletter / Sign Up Button */}
+                  <div className="pt-2 border-t border-ink/10 mt-2">
+                    <button
+                      onClick={() => {
+                        window.dispatchEvent(new CustomEvent('open-subscribe-modal'));
+                        setIsMobileMenuOpen(false);
                       }}
-                      className={`block w-full text-center font-sans text-[12px] tracking-wide uppercase transition-all py-1 px-2 rounded hover:bg-ink/5 ${
-                        currentView === link.id ? 'text-ink font-extrabold bg-ink/5' : 'text-ink/60 hover:text-ink font-medium'
-                      }`}
+                      className="flex items-center justify-between w-full text-left font-sans text-[13px] tracking-wide text-ink/80 hover:text-ink transition-all py-1 px-1.5 rounded hover:bg-ink/5 cursor-pointer group"
                     >
-                      {link.label}
-                    </a>
-                  ))}
+                      <span className="font-normal">Newsletter Sign Up</span>
+                      <span className="text-[9px] font-mono tracking-wider font-medium uppercase text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                        10% OFF
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* Account / Client Access Gateway Link */}
+                  <div className="pt-1">
+                    <button
+                      onClick={() => {
+                        onOpenAdmin();
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="flex items-center justify-between w-full text-left font-sans text-[13px] tracking-wide text-ink/70 hover:text-ink transition-all py-1 px-1.5 rounded hover:bg-ink/5 cursor-pointer group"
+                    >
+                      <span className="font-normal">{isAdmin ? 'Admin Dashboard' : 'Account Login'}</span>
+                      <span className="text-[9px] font-mono tracking-widest uppercase opacity-40 px-1.5 py-0.5 bg-ink/5 rounded group-hover:bg-ink group-hover:text-paper transition-all">
+                        {isAdmin ? 'ACTIVE' : 'ACCESS'}
+                      </span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
               {/* Drawer Footer */}
-              <div className="pt-3 border-t border-ink/10 flex items-center justify-center gap-3 font-sans text-[11px] font-medium uppercase tracking-widest text-ink/50 text-center">
-                <span>D3COMPOSURE ARCHIVE</span>
-                <span>•</span>
-                <span>EST. 2026</span>
+              <div className="pt-3 flex items-center justify-between font-sans text-[11px] font-medium tracking-wide text-ink/50 border-t border-ink/5">
+                <button
+                  onClick={() => {
+                    onOpenAdmin();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="hover:text-ink transition-colors cursor-pointer"
+                >
+                  {isAdmin ? 'Admin Portal' : 'Account Login'}
+                </button>
+                <span>Est. 2026</span>
               </div>
             </motion.div>
           </>
@@ -410,11 +532,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               animate={{ x: '0%' }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 320 }}
-              className="search-drawer font-mono fixed left-0 top-0 bottom-0 z-[70] w-[280px] sm:w-[360px] max-w-[85vw] h-full bg-paper border-r border-ink/10 shadow-2xl flex flex-col justify-between p-6 sm:p-8 overflow-y-auto pointer-events-auto"
+              className="search-drawer font-mono fixed left-0 top-0 bottom-0 z-[70] w-[280px] sm:w-[360px] max-w-[85vw] h-full bg-paper shadow-2xl flex flex-col justify-between p-6 sm:p-8 overflow-y-auto pointer-events-auto"
             >
               <div>
-                <div className="flex items-center justify-between pb-4 border-b border-ink/10 mb-6">
-                  <span className="text-[12px] font-bold tracking-[0.2em] text-ink uppercase">SEARCH</span>
+                <div className="flex items-center justify-between pb-4 mb-6">
+                  <span className="text-[12px] font-semibold tracking-wider text-ink">Search</span>
                   <button
                     onClick={() => setIsSearchOpen(false)}
                     className="p-1 text-ink/70 hover:text-ink transition-colors cursor-pointer"
@@ -440,36 +562,36 @@ export const Navbar: React.FC<NavbarProps> = ({
                         addRecentSearch(searchTerm);
                       }
                     }}
-                    placeholder="ENTER QUERY..."
-                    className="w-full bg-transparent border-b border-ink text-[12px] font-mono tracking-[0.15em] text-ink focus:outline-none pb-2 uppercase transition-colors"
+                    placeholder="Enter query..."
+                    className="w-full bg-transparent border-b border-ink text-[12px] font-mono tracking-wider text-ink focus:outline-none pb-2 transition-colors"
                   />
                   {searchTerm && (
                     <button
                       onClick={() => onSearchChange('')}
-                      className="absolute right-0 top-0 text-[10px] font-mono font-bold tracking-widest text-ink/40 hover:text-ink uppercase cursor-pointer"
+                      className="absolute right-0 top-0 text-[10px] font-mono font-medium tracking-wider text-ink/40 hover:text-ink cursor-pointer"
                     >
-                      CLEAR
+                      Clear
                     </button>
                   )}
                 </div>
 
                 {/* Recent Searches Overlay Section */}
                 {recentSearches.length > 0 && (
-                  <div className="mt-4 pt-3 border-t border-ink/10 font-mono text-[12px]">
-                    <div className="flex items-center justify-between text-ink/50 tracking-[0.15em] uppercase mb-3">
-                      <span className="flex items-center gap-1.5"><Clock size={12} /> RECENT SEARCHES</span>
+                  <div className="mt-4 pt-3 font-mono text-[12px]">
+                    <div className="flex items-center justify-between text-ink/50 tracking-wider mb-3">
+                      <span className="flex items-center gap-1.5"><Clock size={12} /> Recent Searches</span>
                       <button 
                         onClick={clearRecentSearches}
                         className="hover:text-ink text-[10px] transition-colors cursor-pointer"
                       >
-                        CLEAR ALL
+                        Clear all
                       </button>
                     </div>
                     <div className="flex flex-col gap-2">
                       {recentSearches.map((term) => (
                         <div 
                           key={term}
-                          className="flex items-center justify-between p-2 bg-ink/5 hover:bg-ink/10 text-ink text-[12px] tracking-wider uppercase transition-colors cursor-pointer border border-ink/10 group"
+                          className="flex items-center justify-between p-2 bg-ink/5 hover:bg-ink/10 text-ink text-[12px] tracking-wider transition-colors cursor-pointer group rounded"
                           onClick={() => {
                             handleSelectRecentSearch(term);
                             setIsSearchOpen(false);
@@ -494,9 +616,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
 
               {/* Drawer Footer */}
-              <div className="pt-6 flex items-center justify-between font-mono text-[12px] font-medium uppercase tracking-widest text-ink/50">
-                <span>D3COMPOSURE SEARCH</span>
-                <span>ARCHIVE</span>
+              <div className="pt-6 flex items-center justify-between font-mono text-[12px] font-medium tracking-wider text-ink/50">
+                <span>D3composure Search</span>
+                <span>Archive</span>
               </div>
             </motion.div>
           </>

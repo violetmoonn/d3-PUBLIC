@@ -64,8 +64,10 @@ export const INITIAL_CMS_PRODUCTS: D3Product[] = [
     CategoryName: 'ARTIFACTS',
     Tags: ['New', 'Popular'],
     Images: [
-      { url: '/uploads/IMG 4800 1:3.png', type: 'image' },
-      { url: '/uploads/IMG 3215 3:3.png', type: 'image' }
+      { url: '/assets/images/IMG_4800_1_3.png', type: 'image' },
+      { url: '/assets/images/IMG_3215_3_3.png', type: 'image' },
+      { url: '/assets/images/black_hoodie_tracksuit.jpg', type: 'image' },
+      { url: '/assets/images/d3_02_garment.jpg', type: 'image' }
     ],
     'On-Hand Quantity': 45,
     'Reorder Threshold': 10,
@@ -93,8 +95,8 @@ export const INITIAL_CMS_PRODUCTS: D3Product[] = [
     CategoryName: 'GARMENTS',
     Tags: ['Popular'],
     Images: [
-      { url: '/uploads/d3_02_model_front.jpg' },
-      { url: '/uploads/d3_02_garment.jpg' }
+      { url: '/assets/images/d3_02_model_front.jpg', type: 'image' },
+      { url: '/assets/images/d3_02_garment.jpg', type: 'image' }
     ],
     'On-Hand Quantity': 28,
     'Reorder Threshold': 15,

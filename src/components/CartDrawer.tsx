@@ -59,7 +59,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             {/* Header */}
             <div className="p-4 flex items-center justify-between border-b border-ink/10 relative">
               <span className="font-mono text-[11px] font-bold tracking-[0.15em] uppercase text-ink text-left flex-1">
-                {`SHOPPING BAG (${totalItems})`}
+                {totalItems > 0 ? `SHOPPING BAG (${totalItems})` : 'SHOPPING BAG'}
               </span>
 
               <button 

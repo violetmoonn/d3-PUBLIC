@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Activity, ChevronLeft, ChevronRight, LayoutGrid, LogOut, Package, Settings, MessageSquare, UserCheck, Database, Megaphone } from 'lucide-react';
+import { Activity, ChevronLeft, ChevronRight, LayoutGrid, LogOut, Package, Settings, MessageSquare, UserCheck, Database, Megaphone, PlusCircle } from 'lucide-react';
 import { Announcement, AppSettings, DiscountCode, DriveLink, LogEntry, Order, Product } from '../../types';
 import { HeroTab } from './HeroTab';
 import { ProductsTab } from './ProductsTab';
@@ -9,6 +9,7 @@ import { AnnouncementsTab } from './AnnouncementsTab';
 import { TransmissionsTab } from './TransmissionsTab';
 import { WaitlistTab, WaitlistEntry } from './WaitlistTab';
 import { D3CatalogCmsTab } from './D3CatalogCmsTab';
+import { ArtifactCreatorTab } from './ArtifactCreatorTab';
 
 interface AdminDashboardProps {
   products: Product[];
@@ -110,6 +111,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const tabs = [
+    { id: 'NEW_ARTIFACT', icon: PlusCircle, label: '+ NEW ARTIFACT' },
     { id: 'CATALOG_CMS', icon: Database, label: 'D3 CATALOG CMS' },
     { id: 'PRODUCTS', icon: Package, label: 'PRODUCTS' },
     { id: 'TRANSMISSIONS', icon: MessageSquare, label: 'TRANSMISSIONS' },
@@ -118,6 +120,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     { id: 'HERO', icon: LayoutGrid, label: 'HERO SLIDES' },
     { id: 'SETTINGS', icon: Settings, label: 'SETTINGS' },
   ];
+
+  const lowStockCount = products.filter(p => (p.stock || 0) < 5).length;
 
   return (
     <div className="flex h-screen bg-paper overflow-hidden tab-content font-typewriter">
@@ -151,13 +155,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <button
               key={tab.id}
               onClick={() => onTabChange?.(tab.id)}
-              className={`w-full flex items-center gap-3 py-2 px-1 transition-all group ${
+              className={`w-full flex items-center gap-3 py-2 px-1 transition-all group relative ${
                 activeTab === tab.id ? 'text-ink font-bold' : 'text-ink/40 hover:text-ink font-medium'
               }`}
             >
-              <tab.icon size={18} className={activeTab === tab.id ? 'opacity-100' : 'opacity-40 group-hover:opacity-100'} />
+              <div className="relative">
+                <tab.icon size={18} className={activeTab === tab.id ? 'opacity-100' : 'opacity-40 group-hover:opacity-100'} />
+                {tab.id === 'PRODUCTS' && lowStockCount > 0 && isSidebarCollapsed && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full ring-2 ring-paper animate-pulse" />
+                )}
+              </div>
               {!isSidebarCollapsed && (
                 <span className="text-[14px] font-mono uppercase tracking-wider">{tab.label}</span>
+              )}
+              {!isSidebarCollapsed && tab.id === 'PRODUCTS' && lowStockCount > 0 && (
+                <span className="ml-auto px-2 py-0.5 bg-amber-500/20 text-amber-700 border border-amber-500/40 text-[9px] font-mono font-bold uppercase tracking-wider rounded-none flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                  {lowStockCount} LOW
+                </span>
               )}
             </button>
           ))}
@@ -262,6 +277,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 />
               )}
 
+              {activeTab === 'NEW_ARTIFACT' && (
+                <ArtifactCreatorTab 
+                  onSave={async (p) => {
+                    const success = await onUpdateProduct(p);
+                    if (success) {
+                      addLog(`NEW ARTIFACT INDUCTED: ${p.name}`, 'success');
+                    }
+                    return success;
+                  }}
+                  setGlobalError={(msg) => msg && addLog(msg, 'error')}
+                  setSuccessMessage={(msg) => msg && addLog(msg, 'success')}
+                  onNavigateToProducts={() => onTabChange ? onTabChange('PRODUCTS') : null}
+                />
+              )}
+
               {activeTab === 'CATALOG_CMS' && (
                 <D3CatalogCmsTab />
               )}
@@ -295,6 +325,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <Activity size={10} className="animate-pulse" />
               <span>ACTIVE SESSIONS: {Math.floor(Math.random() * 5) + 3}</span>
             </div>
+            {lowStockCount > 0 && (
+              <>
+                <div className="h-3 w-px bg-ink/10 shrink-0" />
+                <button
+                  onClick={() => onTabChange?.('PRODUCTS')}
+                  className="flex items-center gap-1.5 text-amber-600 font-bold hover:underline cursor-pointer shrink-0"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                  <span>LOW STOCK ALERT ({lowStockCount} ITEMS &lt; 5)</span>
+                </button>
+              </>
+            )}
             <div className="h-3 w-px bg-ink/10 shrink-0" />
             <div className="flex items-center gap-2 overflow-hidden">
               <span className="opacity-50 shrink-0">LATEST ACTIVITY:</span>
