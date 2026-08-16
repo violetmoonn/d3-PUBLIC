@@ -6,9 +6,31 @@
     <title>D3COMPOSURE</title>
     <meta name="description" content="D3COMPOSURE. Verifying artifacts through the secure gateway. Each piece is unique and serial-tracked." />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22black%22/></svg>">
-    <script async crossorigin="anonymous" src="https://js.stripe.com/v3/buy-button.js"></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="https://apis.google.com/js/api.js" async defer></script>
+    <script>
+      // Top-level error interceptor to handle cross-origin script errors and iframe boundary events safely
+      window.onerror = function(message, source, lineno, colno, error) {
+        if (!message || message === 'Script error.' || String(message).includes('Script error')) {
+          console.warn('[Notice] Intercepted cross-origin script error.');
+          return true; // Suppresses default error propagation
+        }
+        return false;
+      };
+      window.addEventListener('error', function(event) {
+        var msg = event && (event.message || (event.error && event.error.message) || String(event.error || ''));
+        if (msg === 'Script error.' || msg.includes('Script error') || msg.includes('ResizeObserver')) {
+          if (event.preventDefault) event.preventDefault();
+          if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+        }
+      }, true);
+      window.addEventListener('unhandledrejection', function(event) {
+        var reason = event && event.reason;
+        var msg = (reason && reason.message) || String(reason || '');
+        if (msg.includes('Script error') || msg.includes('IDBDatabase') || msg.includes('database connection is closing') || msg.includes('Database closing')) {
+          if (event.preventDefault) event.preventDefault();
+          if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+        }
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

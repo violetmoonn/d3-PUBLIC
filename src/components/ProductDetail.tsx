@@ -1,7 +1,7 @@
 import React from 'react';
 import QRCode from 'qrcode';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, ChevronRight, Eye, Info, ShieldCheck, X, Loader2, Plus, Trash2, ShoppingBag, Undo, CreditCard, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, Info, ShieldCheck, X, Loader2, Plus, Trash2, ShoppingCart, Undo, CreditCard, ExternalLink } from 'lucide-react';
 import { Product } from '../types';
 import { MediaRenderer } from './MediaRenderer';
 import { safeToFixed, convertGoogleDriveUrl, formatPrice, t } from '../utils/helpers';
@@ -248,11 +248,11 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
             </div>
 
             <div className="flex-1 overflow-y-auto">
-              <div className="max-w-[1440px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 p-6 sm:p-10 md:p-16">
-                {/* Left Side: Product Card Images */}
-                <div className="w-full space-y-6">
+              <div className="max-w-[1440px] mx-auto grid grid-cols-1 lg:grid-cols-2 min-h-[calc(100vh-80px)]">
+                {/* Left Page: Product Card Imagery & Media Gallery */}
+                <div className="w-full p-6 sm:p-10 lg:p-12 lg:border-r border-ink/10 flex flex-col justify-between space-y-6">
                   <div 
-                    className={`relative aspect-square sm:aspect-[1.1/1] lg:aspect-auto lg:h-[calc(100vh-220px)] lg:max-h-[650px] bg-soft overflow-hidden group transition-all duration-300 flex items-center justify-center ${isAdmin ? 'cursor-pointer' : ''} ${isDragging && uploadIndex !== null ? 'ring-4 ring-ink ring-inset' : ''}`}
+                    className={`relative w-full aspect-square sm:aspect-[1.1/1] lg:aspect-auto lg:h-[calc(100vh-240px)] lg:max-h-[640px] bg-soft overflow-hidden group transition-all duration-300 flex items-center justify-center rounded-sm ${isAdmin ? 'cursor-pointer' : ''} ${isDragging && uploadIndex !== null ? 'ring-4 ring-ink ring-inset' : ''}`}
                     onDoubleClick={handleImageDoubleClick}
                     onDragOver={(e) => handleDragOver(e)}
                     onDragLeave={handleDragLeave}
@@ -278,19 +278,45 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                     <AnimatePresence mode="wait">
                       <motion.div
                         key={activeImage}
-                        initial={{ opacity: 0, scale: 1.05 }}
+                        initial={{ opacity: 0, scale: 1.02 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        transition={{ duration: 0.5 }}
-                        className="w-full h-full flex items-center justify-center"
+                        exit={{ opacity: 0, scale: 0.98 }}
+                        transition={{ duration: 0.3 }}
+                        className="w-full h-full flex items-center justify-center p-2 sm:p-4"
                       >
                         <MediaRenderer 
                           asset={product.images?.[activeImage]} 
                           fallbackUrl={product.provenanceImage}
-                          className="w-full h-full object-contain transition-all duration-700"
+                          className="w-full h-full object-contain transition-all duration-500"
                         />
                       </motion.div>
                     </AnimatePresence>
+
+                    {/* Image navigation controls if multiple images */}
+                    {product.images && product.images.length > 1 && (
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveImage((prev) => (prev > 0 ? prev - 1 : product.images.length - 1));
+                          }}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 p-2 bg-white/80 hover:bg-white text-ink rounded-full shadow-md transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                          aria-label="Previous image"
+                        >
+                          <ChevronLeft size={16} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveImage((prev) => (prev < product.images.length - 1 ? prev + 1 : 0));
+                          }}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-white/80 hover:bg-white text-ink rounded-full shadow-md transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                          aria-label="Next image"
+                        >
+                          <ChevronRight size={16} />
+                        </button>
+                      </>
+                    )}
                     
                     {isAdmin && (
                       <input 
@@ -303,7 +329,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                     )}
                   </div>
 
-                  <div className="grid grid-cols-4 gap-4">
+                  {/* Thumbnail gallery */}
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
                     {product.images?.map((img, idx) => (
                       <div key={img.uid || `${img.url}-${idx}`} className="relative group/thumb">
                         <div 
@@ -312,7 +339,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                           onClick={() => setActiveImage(idx)}
                           onDoubleClick={(e) => handleImageDoubleClick(e, idx)}
                           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveImage(idx); }}
-                          className={`w-full aspect-square transition-all overflow-hidden border cursor-pointer ${activeImage === idx ? 'border-ink' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                          className={`w-full aspect-square transition-all overflow-hidden border cursor-pointer rounded-xs ${activeImage === idx ? 'border-ink ring-1 ring-ink' : 'border-transparent opacity-60 hover:opacity-100'}`}
                         >
                           <MediaRenderer asset={img} className="w-full h-full object-cover" />
                         </div>
@@ -320,10 +347,10 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                         {isAdmin && (
                           <button 
                             onClick={(e) => handleDeleteImage(e, idx)}
-                            className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover/thumb:opacity-100 transition-opacity shadow-lg hover:bg-red-600 z-10"
+                            className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover/thumb:opacity-100 transition-opacity shadow-md hover:bg-red-600 z-10"
                             title="Remove Asset"
                           >
-                            <Trash2 size={12} />
+                            <Trash2 size={10} />
                           </button>
                         )}
                       </div>
@@ -334,17 +361,17 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                         onClick={handleAddMediaClick}
                         onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setUploadIndex(null); setIsDragging(true); }}
                         onDrop={(e) => handleDrop(e, undefined)}
-                        className={`aspect-square border border-dashed border-ink/20 flex flex-col items-center justify-center gap-2 transition-all text-ink/40 hover:text-ink hover:border-ink hover:bg-ink/5 ${isDragging && uploadIndex === null ? 'bg-ink/10 border-ink scale-105' : ''}`}
+                        className={`aspect-square border border-dashed border-ink/20 flex flex-col items-center justify-center gap-1.5 transition-all text-ink/40 hover:text-ink hover:border-ink hover:bg-ink/5 rounded-xs ${isDragging && uploadIndex === null ? 'bg-ink/10 border-ink scale-105' : ''}`}
                       >
-                        <Plus size={20} />
+                        <Plus size={16} />
                         <span className="text-[8px] font-mono uppercase tracking-widest">{isDragging && uploadIndex === null ? 'UPLOAD' : 'ADD'}</span>
                       </button>
                     )}
                   </div>
                 </div>
 
-                {/* Right Side: Product Details & Description */}
-                <div className="w-full flex flex-col gap-8 lg:sticky lg:top-8 self-start">
+                {/* Right Page: Product Details, Price, Size Selection & Buy Buttons */}
+                <div className="w-full p-6 sm:p-10 lg:p-12 flex flex-col justify-between space-y-8">
                   <div className="space-y-6">
                     <div>
                       <h2 className="text-2xl sm:text-3xl md:text-4xl font-brand font-bold uppercase tracking-tight text-ink mb-2">
@@ -370,89 +397,57 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                           ));
                         })()}
                       </h2>
-                      <div className="flex justify-between items-start mb-4">
+
+                      <p className="text-[1.4rem] font-numbers font-bold tracking-tight text-ink mt-2">
+                        {formatPrice(product.price)}
+                      </p>
+                      
+                      <div className="mt-3 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+                        <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-ink/80">
+                          IN STOCK • READY TO DISPATCH
+                        </span>
                       </div>
-                      <p className="text-[1.25rem] font-numbers font-bold tracking-tighter text-ink">{formatPrice(product.price)}</p>
-                      <p className="mt-4 text-[10px] font-mono leading-relaxed opacity-40 uppercase max-w-md">
+
+                      <p className="mt-5 text-[11px] font-mono leading-relaxed text-ink/70 uppercase max-w-lg border-t border-ink/10 pt-4">
                         Crafted from 100% organic cotton with a brushed fleece interior. Features a relaxed fit and reinforced ribbing at the cuffs and hems. Made to order in Portugal. Please allow 2 weeks till delivery. The Graphics may be slightly different from the photo.
                       </p>
                     </div>
-
-                    <div className="grid grid-cols-1 py-4">
-                      <div className="space-y-2">
-                        <p className="text-xs font-numbers font-bold uppercase text-ink">
-                          IN STOCK
-                        </p>
-                      </div>
-                    </div>
                   </div>
 
-                  <div className="space-y-8">
-                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
-                      <div className="space-y-4 flex-grow">
-                        <div className="flex flex-wrap gap-6 pt-1">
-                          {(product.sizes && product.sizes.length > 0 ? product.sizes : ['xs', 's', 'm', 'l', 'xl']).map(size => (
-                            <button 
-                              key={size}
-                              onClick={() => setSelectedSize(prev => prev === size ? '' : size)}
-                              className={`text-[12px] font-mono font-bold tracking-widest transition-all uppercase px-2 py-1 transition-colors ${
-                                selectedSize === size 
-                                  ? 'text-paper bg-black font-extrabold' 
-                                  : 'text-ink/60 hover:text-ink hover:bg-ink/5'
-                              }`}
-                            >
-                              {size}
-                            </button>
-                          ))}
-                        </div>
+                  {/* Size selector & Action Buttons */}
+                  <div className="space-y-6 border-t border-ink/10 pt-6">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center text-[10px] font-mono uppercase tracking-widest text-ink/60">
+                        <span>SELECT SIZE</span>
+                        {selectedSize && <span className="text-ink font-bold">SELECTED: {selectedSize}</span>}
                       </div>
+                      <div className="flex flex-wrap gap-3">
+                        {(product.sizes && product.sizes.length > 0 ? product.sizes : ['xs', 's', 'm', 'l', 'xl']).map(size => (
+                          <button 
+                            key={size}
+                            onClick={() => setSelectedSize(prev => prev === size ? '' : size)}
+                            className={`min-w-[44px] h-[40px] text-[12px] font-mono font-bold tracking-widest uppercase px-3 py-1 transition-all rounded-xs border cursor-pointer ${
+                              selectedSize === size 
+                                ? 'text-white bg-black border-black shadow-sm scale-105' 
+                                : 'text-ink border-ink/20 hover:border-ink hover:bg-black/5'
+                            }`}
+                          >
+                            {size}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
-                      <div className="w-full sm:w-auto shrink-0 flex flex-col gap-3">
-                        {product.stripe_buy_button_id && product.stripe_publishable_key ? (
-                          <div className="flex flex-col gap-2">
-                            <div className="stripe-button-wrapper">
-                              <StripeBuyButton 
-                                buyButtonId={product.stripe_buy_button_id}
-                                publishableKey={product.stripe_publishable_key}
-                              />
-                            </div>
-                            <button
-                              onClick={() => {
-                                if (!selectedSize) {
-                                  setGlobalError("PLEASE SELECT A SIZE BEFORE CONTINUING");
-                                  return;
-                                }
-                                onAddToCart(product, selectedSize);
-                              }}
-                              className="w-full sm:w-auto px-4 py-2 border border-ink/20 hover:border-ink text-ink/70 hover:text-ink text-[9px] font-mono uppercase tracking-widest transition-all text-center"
-                            >
-                              + OR ADD TO SHOPPING BAG
-                            </button>
+                    <div className="w-full flex flex-col gap-3 pt-2">
+                      {product.stripe_buy_button_id && product.stripe_publishable_key ? (
+                        <div className="flex flex-col gap-2">
+                          <div className="stripe-button-wrapper">
+                            <StripeBuyButton 
+                              buyButtonId={product.stripe_buy_button_id}
+                              publishableKey={product.stripe_publishable_key}
+                            />
                           </div>
-                        ) : product.stripe_payment_link ? (
-                          <div className="flex flex-col gap-2">
-                            <a
-                              href={product.stripe_payment_link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="w-full sm:w-auto px-6 py-3 bg-ink text-paper text-[11px] font-mono font-bold uppercase tracking-[0.2em] transition-all cursor-pointer hover:bg-black flex items-center justify-center gap-2"
-                            >
-                              <CreditCard size={14} /> BUY NOW WITH STRIPE
-                            </a>
-                            <button
-                              onClick={() => {
-                                if (!selectedSize) {
-                                  setGlobalError("PLEASE SELECT A SIZE BEFORE CONTINUING");
-                                  return;
-                                }
-                                onAddToCart(product, selectedSize);
-                              }}
-                              className="w-full sm:w-auto px-4 py-2 border border-ink/20 hover:border-ink text-ink/70 hover:text-ink text-[9px] font-mono uppercase tracking-widest transition-all text-center"
-                            >
-                              + OR ADD TO SHOPPING BAG
-                            </button>
-                          </div>
-                        ) : (
                           <button
                             onClick={() => {
                               if (!selectedSize) {
@@ -461,14 +456,50 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                               }
                               onAddToCart(product, selectedSize);
                             }}
-                            className="w-full sm:w-auto px-6 py-3 border border-ink/30 hover:border-ink text-ink text-[11px] font-mono font-bold uppercase tracking-[0.2em] transition-all cursor-pointer hover:bg-ink/5 flex items-center justify-center gap-1.5"
-                            id="add-to-bag-btn"
-                            aria-label="Select Product"
+                            className="w-full py-3 border border-ink/20 hover:border-ink text-ink/80 hover:text-ink text-[11px] font-mono font-bold uppercase tracking-widest transition-all text-center rounded-xs cursor-pointer hover:bg-black/5"
                           >
-                            + SELECT PRODUCT
+                            + ADD TO SHOPPING BAG
                           </button>
-                        )}
-                      </div>
+                        </div>
+                      ) : product.stripe_payment_link ? (
+                        <div className="flex flex-col gap-2">
+                          <a
+                            href={product.stripe_payment_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full py-3.5 bg-ink text-paper text-[12px] font-mono font-bold uppercase tracking-[0.2em] transition-all cursor-pointer hover:bg-black flex items-center justify-center gap-2 rounded-xs shadow-sm"
+                          >
+                            <CreditCard size={15} /> BUY NOW WITH STRIPE
+                          </a>
+                          <button
+                            onClick={() => {
+                              if (!selectedSize) {
+                                setGlobalError("PLEASE SELECT A SIZE BEFORE CONTINUING");
+                                return;
+                              }
+                              onAddToCart(product, selectedSize);
+                            }}
+                            className="w-full py-3 border border-ink/20 hover:border-ink text-ink/80 hover:text-ink text-[11px] font-mono font-bold uppercase tracking-widest transition-all text-center rounded-xs cursor-pointer hover:bg-black/5"
+                          >
+                            + ADD TO SHOPPING BAG
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            if (!selectedSize) {
+                              setGlobalError("PLEASE SELECT A SIZE BEFORE CONTINUING");
+                              return;
+                            }
+                            onAddToCart(product, selectedSize);
+                          }}
+                          className="w-full py-3.5 bg-black text-white hover:bg-black/80 text-[12px] font-mono font-bold uppercase tracking-[0.2em] transition-all cursor-pointer flex items-center justify-center gap-2 rounded-xs shadow-sm active:scale-[0.99]"
+                          id="add-to-bag-btn"
+                          aria-label="Select Product"
+                        >
+                          <ShoppingCart size={15} /> + SELECT PRODUCT
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

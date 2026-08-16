@@ -23,7 +23,6 @@ import {
   Heart,
   Image as ImageIcon,
   Instagram,
-  KeyRound,
   LayoutGrid,
   Linkedin,
   Link,
@@ -44,7 +43,7 @@ import {
   Settings,
   Share,
   ShieldCheck,
-  ShoppingBag,
+  ShoppingCart,
   Smartphone,
   Sparkles,
   Square,
@@ -263,9 +262,9 @@ export default function App() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([
     {
       id: 'default-shipping-banner',
-      text: "EVERYTHING IS BACK IN STOCK DON'T MISS OUT",
-      background_color: '#6e6e6e',
-      text_color: '#ffffff',
+      text: "Sign up for 10% OFF. All items are back in stock for the season.",
+      background_color: '#f0f0f0',
+      text_color: '#000000',
       active: true,
       created_at: new Date().toISOString()
     }
@@ -824,9 +823,9 @@ export default function App() {
         setAnnouncements([
           {
             id: 'default-shipping-banner',
-            text: "EVERYTHING IS BACK IN STOCK DON'T MISS OUT",
-            background_color: '#6e6e6e',
-            text_color: '#ffffff',
+            text: "Sign up for 10% OFF. All items are back in stock for the season.",
+            background_color: '#f0f0f0',
+            text_color: '#000000',
             active: true,
             created_at: new Date().toISOString()
           }
@@ -1610,7 +1609,7 @@ export default function App() {
           onNavigate={(v) => { if (v === 'video') setView(view === 'video' ? 'store' : 'video'); else setView(v); }}
           settings={settings as any}
           currentView={view}
-          hasAnnouncements={false}
+          hasAnnouncements={!isAnnouncementDismissed && announcements.some(a => a.active)}
           theme={theme}
           onToggleTheme={toggleTheme}
           preferences={preferences}
@@ -1618,7 +1617,14 @@ export default function App() {
         />
       )}
 
-      <main className={`relative z-10 tab-content font-typewriter ${view === 'home' ? '' : 'pt-20 sm:pt-24 pb-20'}`}>
+      <main className={`relative z-10 tab-content font-typewriter ${
+        view === 'home' 
+          ? '' 
+          : (!isAnnouncementDismissed && announcements.some(a => a.active)
+              ? 'pt-28 sm:pt-36 pb-20' 
+              : 'pt-20 sm:pt-28 pb-20'
+            )
+      }`}>
         <AnimatePresence mode="wait">
           {settings.maintenance_mode && !isAdmin ? (
             <motion.div 
@@ -2095,7 +2101,7 @@ export default function App() {
                               }}
                               className="px-6 py-2.5 bg-ink text-paper hover:bg-zinc-800 transition-all font-mono text-[9px] font-bold tracking-widest uppercase flex items-center gap-2 mx-auto sm:mx-0 cursor-pointer"
                             >
-                              <ShoppingBag size={12} />
+                              <ShoppingCart size={12} />
                               VIEW / PURCHASE ARTIFACT
                             </button>
                           </div>
@@ -2218,48 +2224,47 @@ export default function App() {
       </main>
 
       {view !== 'admin' && view !== 'home' && (
-        <footer className="py-6 px-4 sm:px-8 bg-white text-black font-sans border-t border-black/5">
-          <div className="max-w-4xl mx-auto w-full flex flex-col gap-4 opacity-90 hover:opacity-100 transition-opacity duration-300">
+        <footer className="py-4 px-4 sm:px-8 bg-white text-black font-sans border-t border-black/5">
+          <div className="max-w-[1440px] mx-auto w-full flex flex-col gap-2.5 opacity-90 hover:opacity-100 transition-opacity duration-300">
 
-            {/* Centered & Horizontalized Navigation, Corporate, Legal, and Connect */}
-            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2.5 w-full text-center">
-              {/* Group 1: Navigation */}
-              <div className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
-                <h4 className="text-[9.5px] font-sans font-normal tracking-wide text-black/90 shrink-0 mr-0.5">Navigation:</h4>
-                {[
-                  { id: 'home', label: t('home') || 'Home' },
-                  { id: 'store', label: t('store') || 'Shop' },
-                  { id: 'cart', label: 'Shopping Bag' },
-                  { id: 'gallery', label: t('gallery') || 'Gallery' }
-                ]
-                  .filter(link => !settings.sections || settings.sections[link.id] !== false)
-                  .sort((a, b) => a.label.localeCompare(b.label))
-                  .map((link, idx) => (
-                    <React.Fragment key={link.id}>
-                      {idx > 0 && <span className="text-black/25 text-[8px] select-none">•</span>}
-                      <button 
-                        onClick={() => {
-                          if (link.id === 'size-chart') {
-                            window.dispatchEvent(new CustomEvent('open-size-chart'));
-                          } else {
-                            setView(link.id as any);
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                          }
-                        }}
-                        className="text-[8.5px] font-sans font-normal text-black/70 hover:text-black transition-colors tracking-wide cursor-pointer"
-                      >
-                        {link.label}
-                      </button>
-                    </React.Fragment>
-                  ))
-                }
-              </div>
+            {/* Line 1: Navigation & Links (Left) + Region & Preferences (Right) */}
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-y-2 gap-x-4 w-full text-[10px] font-sans">
+              {/* Left Column: Navigation, Corporate, Legal, and Connect */}
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-3 gap-y-1">
+                {/* Navigation Links */}
+                <div className="inline-flex items-center gap-x-2">
+                  {[
+                    { id: 'home', label: t('home') || 'Home' },
+                    { id: 'store', label: t('store') || 'Shop' },
+                    { id: 'cart', label: 'Shopping Bag' },
+                    { id: 'gallery', label: t('gallery') || 'Gallery' }
+                  ]
+                    .filter(link => !settings.sections || settings.sections[link.id] !== false)
+                    .sort((a, b) => a.label.localeCompare(b.label))
+                    .map((link, idx) => (
+                      <React.Fragment key={link.id}>
+                        {idx > 0 && <span className="text-black/25 text-[8px] select-none">•</span>}
+                        <button 
+                          onClick={() => {
+                            if (link.id === 'size-chart') {
+                              window.dispatchEvent(new CustomEvent('open-size-chart'));
+                            } else {
+                              setView(link.id as any);
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }
+                          }}
+                          className="text-[9.5px] font-sans font-normal text-black/70 hover:text-black transition-colors tracking-wide cursor-pointer"
+                        >
+                          {link.label}
+                        </button>
+                      </React.Fragment>
+                    ))
+                  }
+                </div>
 
-              <span className="hidden lg:inline-block text-black/20 text-[8px] select-none">|</span>
+                <span className="text-black/20 text-[8px] select-none">|</span>
 
-              {/* Group 2: Corporate with Hover Sub-tabs */}
-              <div className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 relative">
-                <h4 className="text-[9.5px] font-sans font-normal tracking-wide text-black/90 shrink-0 mr-0.5">Corporate:</h4>
+                {/* Corporate dropdown */}
                 <div 
                   className="relative inline-block"
                   onMouseEnter={() => setFooterCorporateHovered(true)}
@@ -2267,13 +2272,12 @@ export default function App() {
                 >
                   <button
                     onClick={() => setFooterCorporateOpen(!footerCorporateOpen)}
-                    className="inline-flex items-center gap-1 text-[8.5px] font-sans font-normal text-black/70 hover:text-black transition-colors tracking-wide cursor-pointer py-0.5 px-1 rounded hover:bg-black/5"
+                    className="inline-flex items-center gap-1 text-[9.5px] font-sans font-normal text-black/70 hover:text-black transition-colors tracking-wide cursor-pointer py-0.5 px-1 rounded hover:bg-black/5"
                   >
-                    <span>About, Sustainability & Inquiries</span>
+                    <span>Corporate</span>
                     <ChevronDown size={9} className={`transition-transform duration-200 opacity-60 ${footerCorporateHovered || footerCorporateOpen ? 'rotate-180' : ''}`} />
                   </button>
 
-                  {/* Hover Sub-tabs floating menu */}
                   <AnimatePresence>
                     {(footerCorporateHovered || footerCorporateOpen) && (
                       <motion.div
@@ -2281,7 +2285,7 @@ export default function App() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 4, scale: 0.98 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-50 bg-white border border-black/10 shadow-xl rounded-md py-1.5 px-1 min-w-[170px] flex flex-col gap-0.5 text-left"
+                        className="absolute bottom-full left-0 mb-1.5 z-50 bg-white border border-black/10 shadow-xl rounded-md py-1.5 px-1 min-w-[170px] flex flex-col gap-0.5 text-left"
                       >
                         <div className="px-2 py-1 text-[8px] font-mono uppercase text-black/40 tracking-wider border-b border-black/5 mb-1">
                           Corporate
@@ -2311,13 +2315,10 @@ export default function App() {
                     )}
                   </AnimatePresence>
                 </div>
-              </div>
 
-              <span className="hidden lg:inline-block text-black/20 text-[8px] select-none">|</span>
+                <span className="text-black/20 text-[8px] select-none">|</span>
 
-              {/* Group 3: Legal with Hover Sub-tabs */}
-              <div className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 relative">
-                <h4 className="text-[9.5px] font-sans font-normal tracking-wide text-black/90 shrink-0 mr-0.5">Legal:</h4>
+                {/* Legal dropdown */}
                 <div 
                   className="relative inline-block"
                   onMouseEnter={() => setFooterLegalHovered(true)}
@@ -2325,13 +2326,12 @@ export default function App() {
                 >
                   <button
                     onClick={() => setFooterLegalOpen(!footerLegalOpen)}
-                    className="inline-flex items-center gap-1 text-[8.5px] font-sans font-normal text-black/70 hover:text-black transition-colors tracking-wide cursor-pointer py-0.5 px-1 rounded hover:bg-black/5"
+                    className="inline-flex items-center gap-1 text-[9.5px] font-sans font-normal text-black/70 hover:text-black transition-colors tracking-wide cursor-pointer py-0.5 px-1 rounded hover:bg-black/5"
                   >
-                    <span>Policies & Terms</span>
+                    <span>Legal</span>
                     <ChevronDown size={9} className={`transition-transform duration-200 opacity-60 ${footerLegalHovered || footerLegalOpen ? 'rotate-180' : ''}`} />
                   </button>
 
-                  {/* Hover Sub-tabs floating menu */}
                   <AnimatePresence>
                     {(footerLegalHovered || footerLegalOpen) && (
                       <motion.div
@@ -2339,7 +2339,7 @@ export default function App() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 4, scale: 0.98 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-50 bg-white border border-black/10 shadow-xl rounded-md py-1.5 px-1 min-w-[210px] flex flex-col gap-0.5 text-left"
+                        className="absolute bottom-full left-0 mb-1.5 z-50 bg-white border border-black/10 shadow-xl rounded-md py-1.5 px-1 min-w-[210px] flex flex-col gap-0.5 text-left"
                       >
                         <div className="px-2 py-1 text-[8px] font-mono uppercase text-black/40 tracking-wider border-b border-black/5 mb-1">
                           Legal Policies
@@ -2373,191 +2373,156 @@ export default function App() {
                     )}
                   </AnimatePresence>
                 </div>
+
+                <span className="text-black/20 text-[8px] select-none">|</span>
+
+                {/* Connect */}
+                <div className="inline-flex items-center gap-x-2">
+                  <a 
+                    href={`mailto:${settings.contact_email || 'inquire@d3composure.com'}`}
+                    className="text-[9.5px] font-sans font-normal text-black/70 hover:text-black transition-colors tracking-wide cursor-pointer"
+                  >
+                    Contact
+                  </a>
+                  <span className="text-black/25 text-[8px] select-none">•</span>
+                  <a 
+                    href={settings.social_links?.instagram || "https://www.instagram.com/d3composure"} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-[9.5px] font-sans font-normal text-black/70 hover:text-black transition-colors tracking-wide cursor-pointer"
+                  >
+                    Instagram
+                  </a>
+                  <span className="text-black/25 text-[8px] select-none">•</span>
+                  <a 
+                    href={settings.social_links?.linkedin || "#"} 
+                    onClick={(e) => {
+                      if (!settings.social_links?.linkedin) {
+                        e.preventDefault();
+                      }
+                    }}
+                    target={settings.social_links?.linkedin ? "_blank" : undefined}
+                    rel="noopener noreferrer"
+                    className={`text-[9.5px] font-sans font-normal transition-colors tracking-wide ${
+                      settings.social_links?.linkedin 
+                        ? 'text-black/70 hover:text-black cursor-pointer' 
+                        : 'text-black/30 cursor-not-allowed'
+                    }`}
+                    title={settings.social_links?.linkedin ? undefined : "LinkedIn (Unavailable)"}
+                  >
+                    LinkedIn
+                  </a>
+                </div>
               </div>
 
-              <span className="hidden lg:inline-block text-black/20 text-[8px] select-none">|</span>
-
-              {/* Group 4: Connect & Contact */}
-              <div className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
-                <h4 className="text-[9.5px] font-sans font-normal tracking-wide text-black/90 shrink-0 mr-0.5">Connect:</h4>
-                <button 
-                  onClick={() => {
-                    setView('contact');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="text-[8.5px] font-sans font-normal text-black/70 hover:text-black transition-colors tracking-wide cursor-pointer"
-                >
-                  Contact
-                </button>
-                <span className="text-black/25 text-[8px] select-none">•</span>
-                <a 
-                  href={`mailto:${settings.contact_email || 'inquire@d3composure.com'}`}
-                  className="text-[8.5px] font-sans font-normal text-black/70 hover:text-black transition-colors tracking-wide cursor-pointer"
-                >
-                  {settings.contact_email || 'inquire@d3composure.com'}
-                </a>
-                <span className="text-black/25 text-[8px] select-none">•</span>
-                <a 
-                  href={settings.social_links?.instagram || "https://www.instagram.com/d3composure"} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-[8.5px] font-sans font-normal text-black/70 hover:text-black transition-colors tracking-wide cursor-pointer"
-                >
-                  Instagram
-                </a>
-                <span className="text-black/25 text-[8px] select-none">•</span>
-                <a 
-                  href={settings.social_links?.linkedin || "#"} 
-                  onClick={(e) => {
-                    if (!settings.social_links?.linkedin) {
-                      e.preventDefault();
-                    }
-                  }}
-                  target={settings.social_links?.linkedin ? "_blank" : undefined}
-                  rel="noopener noreferrer"
-                  className={`text-[8.5px] font-sans font-normal transition-colors tracking-wide ${
-                    settings.social_links?.linkedin 
-                      ? 'text-black/70 hover:text-black cursor-pointer' 
-                      : 'text-black/30 cursor-not-allowed'
-                  }`}
-                  title={settings.social_links?.linkedin ? undefined : "LinkedIn (Unavailable)"}
-                >
-                  LinkedIn
-                </a>
-              </div>
-            </div>
-
-            {/* Region, Location & Language Selector Bar */}
-            <div className="pt-2 flex flex-wrap items-center justify-center gap-3 font-sans text-[11px] text-black/70">
-              <div className="flex flex-wrap items-center justify-center gap-y-2.5 gap-x-6 w-full">
-                
-                {/* Store Location Selector */}
-                <div className="flex items-center gap-1.5">
-                  <span className="opacity-50 font-normal uppercase tracking-wider text-[10.5px] text-black/80">LOCATION:</span>
-                  <div className="flex items-center gap-1.5">
-                    {STORE_LOCATIONS.map((loc) => {
-                      const active = preferences.storeLocation === loc.id;
-                      return (
-                        <button
-                          key={loc.id}
-                          onClick={() => handleChangePreferences({ 
-                            ...preferences, 
-                            storeLocation: loc.id,
-                            region: loc.region,
-                            currency: loc.currency,
-                            language: loc.language
-                          })}
-                          className={`px-0.5 py-[1px] transition-all font-normal cursor-pointer uppercase ${
-                            active 
-                              ? 'text-black opacity-100' 
-                              : 'text-black/40 hover:text-black'
-                          }`}
-                        >
-                          {loc.city}
-                        </button>
-                      );
-                    })}
-                  </div>
+              {/* Right Column: Preferences (Location, Region, Language, Currency) */}
+              <div className="flex flex-wrap items-center justify-center lg:justify-end gap-x-3 gap-y-1 text-[9.5px] text-black/70">
+                {/* Store Location */}
+                <div className="flex items-center gap-1">
+                  <span className="opacity-40 uppercase tracking-wider text-[9px]">LOC:</span>
+                  {STORE_LOCATIONS.map((loc) => {
+                    const active = preferences.storeLocation === loc.id;
+                    return (
+                      <button
+                        key={loc.id}
+                        onClick={() => handleChangePreferences({ 
+                          ...preferences, 
+                          storeLocation: loc.id,
+                          region: loc.region,
+                          currency: loc.currency,
+                          language: loc.language
+                        })}
+                        className={`px-0.5 transition-all font-normal cursor-pointer uppercase ${
+                          active ? 'text-black font-semibold underline' : 'text-black/40 hover:text-black'
+                        }`}
+                      >
+                        {loc.city}
+                      </button>
+                    );
+                  })}
                 </div>
 
-                {/* Region Selector */}
-                <div className="flex items-center gap-1.5">
-                  <span className="opacity-50 font-normal uppercase tracking-wider text-[10.5px] text-black/80">REGION:</span>
-                  <div className="flex items-center gap-1.5">
-                    {[
-                      { code: 'GLOBAL', name: 'GL' },
-                      { code: 'US', name: 'US' },
-                      { code: 'EU', name: 'EU' },
-                      { code: 'UK', name: 'UK' },
-                      { code: 'JP', name: 'JP' },
-                      { code: 'KR', name: 'KR' }
-                    ].map((r) => {
-                      const active = preferences.region === r.code;
-                      return (
-                        <button
-                          key={r.code}
-                          onClick={() => handleChangePreferences({ ...preferences, region: r.code })}
-                          className={`px-0.5 py-[1px] transition-all font-normal cursor-pointer uppercase ${
-                            active 
-                              ? 'text-black opacity-100' 
-                              : 'text-black/40 hover:text-black'
-                          }`}
-                        >
-                          {r.name}
-                        </button>
-                      );
-                    })}
-                  </div>
+                <span className="text-black/20 text-[8px] select-none">|</span>
+
+                {/* Region */}
+                <div className="flex items-center gap-1">
+                  <span className="opacity-40 uppercase tracking-wider text-[9px]">REG:</span>
+                  {[
+                    { code: 'GLOBAL', name: 'GL' },
+                    { code: 'US', name: 'US' },
+                    { code: 'EU', name: 'EU' },
+                    { code: 'UK', name: 'UK' },
+                    { code: 'JP', name: 'JP' },
+                    { code: 'KR', name: 'KR' }
+                  ].map((r) => {
+                    const active = preferences.region === r.code;
+                    return (
+                      <button
+                        key={r.code}
+                        onClick={() => handleChangePreferences({ ...preferences, region: r.code })}
+                        className={`px-0.5 transition-all font-normal cursor-pointer uppercase ${
+                          active ? 'text-black font-semibold underline' : 'text-black/40 hover:text-black'
+                        }`}
+                      >
+                        {r.name}
+                      </button>
+                    );
+                  })}
                 </div>
 
-                {/* Language Selector */}
-                <div className="flex items-center gap-1.5">
-                  <span className="opacity-50 font-normal uppercase tracking-wider text-[10.5px] text-black/80">LANGUAGE:</span>
-                  <div className="flex items-center gap-1.5">
-                    {[
-                      { code: 'EN', name: 'EN' },
-                      { code: 'JA', name: 'JA' },
-                      { code: 'KO', name: 'KO' },
-                      { code: 'DE', name: 'DE' },
-                      { code: 'FR', name: 'FR' }
-                    ].map((l) => {
-                      const active = preferences.language === l.code;
-                      return (
-                        <button
-                          key={l.code}
-                          onClick={() => handleChangePreferences({ ...preferences, language: l.code })}
-                          className={`px-0.5 py-[1px] transition-all font-normal cursor-pointer uppercase ${
-                            active 
-                              ? 'text-black opacity-100' 
-                              : 'text-black/40 hover:text-black'
-                          }`}
-                        >
-                          {l.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                <span className="text-black/20 text-[8px] select-none">|</span>
 
-                {/* Currency Selector */}
-                <div className="flex items-center gap-1.5">
-                  <span className="opacity-50 font-normal uppercase tracking-wider text-[10.5px] text-black/80">CURRENCY:</span>
-                  <div className="flex items-center gap-1.5">
-                    {[
-                      { code: 'USD', symbol: '$' },
-                      { code: 'EUR', symbol: '€' },
-                      { code: 'GBP', symbol: '£' },
-                      { code: 'JPY', symbol: '¥' },
-                      { code: 'KRW', symbol: '₩' }
-                    ].map((c) => {
-                      const active = preferences.currency === c.code;
-                      return (
-                        <button
-                          key={c.code}
-                          onClick={() => handleChangePreferences({ ...preferences, currency: c.code })}
-                          className={`px-0.5 py-[1px] transition-all font-normal cursor-pointer uppercase ${
-                            active 
-                              ? 'text-black opacity-100' 
-                              : 'text-black/40 hover:text-black'
-                          }`}
-                        >
-                          {c.code} ({c.symbol})
-                        </button>
-                      );
-                    })}
-                  </div>
+                {/* Currency */}
+                <div className="flex items-center gap-1">
+                  <span className="opacity-40 uppercase tracking-wider text-[9px]">CUR:</span>
+                  {[
+                    { code: 'USD', symbol: '$' },
+                    { code: 'EUR', symbol: '€' },
+                    { code: 'GBP', symbol: '£' },
+                    { code: 'JPY', symbol: '¥' },
+                    { code: 'KRW', symbol: '₩' }
+                  ].map((c) => {
+                    const active = preferences.currency === c.code;
+                    return (
+                      <button
+                        key={c.code}
+                        onClick={() => handleChangePreferences({ ...preferences, currency: c.code })}
+                        className={`px-0.5 transition-all font-normal cursor-pointer uppercase ${
+                          active ? 'text-black font-semibold underline' : 'text-black/40 hover:text-black'
+                        }`}
+                      >
+                        {c.code}
+                      </button>
+                    );
+                  })}
                 </div>
-
               </div>
             </div>
 
-            {/* Bottom Row: Newsletter on Bottom-Left, Copyright on Bottom-Right */}
-            <div className="pt-4 mt-1 border-t border-black/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 w-full">
+            {/* Line 2: Newsletter on Left, Account Avatar Icon & Copyright on Right */}
+            <div className="pt-2 border-t border-black/10 flex flex-col sm:flex-row items-center justify-between gap-2 w-full">
               <div className="flex items-center">
                 <FooterNewsletter onOpenModal={() => setIsWaitlistPopupOpen(true)} />
               </div>
-              <div className="text-[10px] font-sans uppercase tracking-wider text-black/50">
-                © {new Date().getFullYear()} {settings.site_title || 'D3COMPOSURE'}. ALL RIGHTS RESERVED.
+              <div className="flex items-center gap-3">
+                {/* Account Avatar Button */}
+                <button
+                  onClick={() => setIsAdminLoginOpen(true)}
+                  title={isAdmin ? "Admin Dashboard (Active)" : "Client & Member Account"}
+                  aria-label={isAdmin ? "Admin Dashboard" : "Account Login"}
+                  className="flex items-center gap-1.5 text-[9.5px] font-sans text-black/60 hover:text-black transition-colors cursor-pointer group"
+                >
+                  <div className="w-5 h-5 rounded-full border border-black/20 group-hover:border-black/60 flex items-center justify-center bg-black/5 group-hover:bg-black/10 transition-all">
+                    <User size={10} className="stroke-[1.7] text-black/70 group-hover:text-black" />
+                  </div>
+                  <span className="uppercase tracking-wider">{isAdmin ? 'ADMIN' : 'ACCOUNT'}</span>
+                </button>
+
+                <span className="text-black/20 text-[8px] select-none">•</span>
+
+                <div className="text-[9.5px] font-sans uppercase tracking-wider text-black/50">
+                  © {new Date().getFullYear()} {settings.site_title || 'D3COMPOSURE'}. ALL RIGHTS RESERVED.
+                </div>
               </div>
             </div>
 
@@ -2635,27 +2600,7 @@ export default function App() {
 
       {view !== 'home' && <CookieConsent />}
 
-      {/* Disguised Bottom-Left Keyhole Button for Account / Admin Login */}
-      {view !== 'admin' && (
-        <div className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-40">
-          <button
-            onClick={() => {
-              if (isAdmin) {
-                setView('admin');
-              } else {
-                setAdminPassword('');
-                setIsAdminLoginOpen(true);
-              }
-            }}
-            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-paper/90 hover:bg-black hover:text-white text-ink/70 border border-ink/15 shadow-md flex items-center justify-center transition-all duration-200 cursor-pointer backdrop-blur-md group hover:scale-105 active:scale-95"
-            aria-label="Account Login"
-            title="Account Login"
-          >
-            <KeyRound size={14} className="stroke-[1.75] group-hover:rotate-12 transition-transform duration-200" />
-            <span className="sr-only">Account Login</span>
-          </button>
-        </div>
-      )}
+
 
       <SubscribeListModal 
         isOpen={isWaitlistPopupOpen}

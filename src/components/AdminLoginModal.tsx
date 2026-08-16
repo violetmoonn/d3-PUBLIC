@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2, KeyRound, LogIn, User, X } from 'lucide-react';
+import { Loader2, Lock, LogIn, User, X } from 'lucide-react';
 
 interface AdminLoginModalProps {
   isOpen: boolean;
@@ -56,33 +56,27 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
 
             <div className="p-8 sm:p-10">
               <div className="mb-8 text-center">
-                <div className="w-14 h-14 bg-ink text-paper rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
-                  <KeyRound size={24} className="stroke-[1.75]" />
-                </div>
-                <span className="text-[10px] font-mono font-medium uppercase tracking-[0.25em] text-ink/50 mb-1.5 block">
-                  CLIENT & MEMBER ACCESS
+                <span className="text-[11px] font-sans font-medium uppercase tracking-[0.25em] text-ink/80 block">
+                  CLIENT ACCESS
                 </span>
-                <h2 className="text-2xl sm:text-3xl font-display font-semibold tracking-tight text-ink">
-                  ACCOUNT LOGIN
-                </h2>
                 <p className="text-[12px] font-sans text-ink/60 mt-2 leading-relaxed">
-                  Sign in with your credentials or access key to manage your account.
+                  Sign in with your credentials to manage your account.
                 </p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-1.5 text-left">
                   <label className="text-[10px] font-mono font-medium uppercase tracking-wider text-ink/70">
-                    ACCESS KEY / PASSWORD
+                    PASSWORD
                   </label>
                   <div className="relative">
-                    <KeyRound size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink/40 stroke-[1.5]" />
+                    <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink/40 stroke-[1.5]" />
                     <input 
                       required
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your access key..."
+                      placeholder="Enter your password..."
                       autoFocus
                       className="w-full bg-ink/5 border border-ink/15 rounded-md p-3.5 pl-10 text-[12px] font-mono text-ink focus:outline-none focus:border-ink transition-all placeholder:text-ink/30"
                     />

@@ -43,28 +43,32 @@
 }
 
 :root {
-  --paper: #ffffff;
+  --paper: #faf9f6;
   --ink: #000000;
   --ink-rgb: 0, 0, 0;
   --gold: #000000;
-  --soft: #ffffff;
+  --soft: #f3f2ee;
   --silver: #eaeaea;
   --aura: rgba(0, 0, 0, 0.03);
 }
 
 [data-theme='light'] {
-  --paper: #ffffff;
+  --paper: #faf9f6;
   --ink: #000000;
   --ink-rgb: 0, 0, 0;
   --gold: #000000;
-  --soft: #ffffff;
+  --soft: #f3f2ee;
   --silver: #eaeaea;
   --aura: rgba(0, 0, 0, 0.03);
 }
 
 @layer base {
   body {
-    background: var(--paper);
+    background-color: var(--paper);
+    background-image: 
+      linear-gradient(to right, rgba(0, 0, 0, 0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.035) 1px, transparent 1px);
+    background-size: 24px 24px;
     @apply text-ink font-sans antialiased selection:bg-ink selection:text-paper;
     font-family: "Arial", "Helvetica Neue", Helvetica, sans-serif;
     text-rendering: optimizeLegibility;
@@ -73,8 +77,9 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
   
-  /* All unbolded text uses the unbolded version of the d3composure logo font ("Arial", "Helvetica Neue", Helvetica, sans-serif) */
-  p, span, div, a, li, td, th, input, select, textarea, button,
+  /* All text and UI elements use the announcement banner font ("Arial", "Helvetica Neue", Helvetica, sans-serif) */
+  p, span, div, a, li, td, th, input, select, textarea, button, small, label,
+  .font-sans,
   .font-mono,
   .font-mono *,
   .font-typewriter,
@@ -83,74 +88,67 @@
   .typewriter-content *,
   .tab-content,
   .tab-content *,
-  .font-ssense {
+  .font-ssense,
+  .font-numbers {
     font-family: "Arial", "Helvetica Neue", Helvetica, sans-serif;
   }
 
-  /* Globally make heavy weights use the logo font ("Arial Black", "Impact", "Anton", sans-serif) with slightly less space between letters */
-  .font-bold, .font-semibold, .font-black, .font-extrabold, b, strong,
-  .font-mono .font-bold, .font-mono b, .font-mono strong,
-  .tab-content .font-bold, .tab-content b,
-  button.font-bold, .font-display {
-    font-family: "Arial Black", "Impact", "Anton", sans-serif !important;
-    letter-spacing: -0.03em;
-  }
-  .font-bold {
-    font-weight: 600 !important;
-  }
-  .font-semibold {
-    font-weight: 500 !important;
-  }
-  .font-black {
-    font-weight: 800 !important;
+  /* All small text sizes specifically use the clean announcement banner font */
+  small,
+  .text-xs,
+  .text-sm,
+  [class*="text-[7"],
+  [class*="text-[8"],
+  [class*="text-[9"],
+  [class*="text-[10"],
+  [class*="text-[11"],
+  [class*="text-[12"],
+  [class*="text-[13"],
+  [class*="text-[14"],
+  .text-xs *,
+  .text-sm *,
+  [class*="text-[7"] *,
+  [class*="text-[8"] *,
+  [class*="text-[9"] *,
+  [class*="text-[10"] *,
+  [class*="text-[11"] *,
+  [class*="text-[12"] *,
+  [class*="text-[13"] *,
+  [class*="text-[14"] * {
+    font-family: "Arial", "Helvetica Neue", Helvetica, sans-serif !important;
   }
 
-  /* Slightly tighter spacing across tracking utilities when applied to bold fonted text */
-  .font-bold.tracking-widest, .font-semibold.tracking-widest, .font-black.tracking-widest,
-  .font-extrabold.tracking-widest, .font-display.tracking-widest {
-    letter-spacing: 0.025em;
-  }
-  .font-bold.tracking-wider, .font-semibold.tracking-wider, .font-black.tracking-wider,
-  .font-extrabold.tracking-wider, .font-display.tracking-wider {
-    letter-spacing: 0.01em;
-  }
-  .font-bold.tracking-wide, .font-semibold.tracking-wide, .font-black.tracking-wide,
-  .font-extrabold.tracking-wide, .font-display.tracking-wide {
-    letter-spacing: -0.015em;
-  }
-  .font-bold.tracking-normal, .font-semibold.tracking-normal, .font-black.tracking-normal,
-  .font-extrabold.tracking-normal, .font-display.tracking-normal {
+  /* Only dedicated brand display titles use the heavy display font */
+  .font-brand, .font-display {
+    font-family: "Arial Black", "Impact", "Anton", sans-serif;
     letter-spacing: -0.03em;
   }
-  .font-bold.tracking-tight, .font-semibold.tracking-tight, .font-black.tracking-tight,
-  .font-extrabold.tracking-tight, .font-display.tracking-tight {
-    letter-spacing: -0.045em;
-  }
-  .font-bold.tracking-tighter, .font-semibold.tracking-tighter, .font-black.tracking-tighter,
-  .font-extrabold.tracking-tighter, .font-display.tracking-tighter {
-    letter-spacing: -0.06em;
+
+  h1.font-brand, h2.font-brand {
+    font-family: "Arial Black", "Impact", "Anton", sans-serif;
   }
 
   h1, h3, h4 {
-    @apply font-display font-medium tracking-tight uppercase;
-    transform: scaleY(1.12);
+    font-family: "Arial", "Helvetica Neue", Helvetica, sans-serif;
+    @apply font-medium tracking-tight uppercase;
+    transform: scaleY(1.08);
     transform-origin: center left;
   }
 
   h2 {
     font-family: "Arial", "Helvetica Neue", Helvetica, sans-serif;
     @apply font-medium tracking-tight uppercase;
-    transform: scaleY(1.12);
+    transform: scaleY(1.08);
     transform-origin: center left;
   }
 
   p {
-    transform: scaleY(1.04);
+    transform: scaleY(1.02);
     transform-origin: center left;
   }
 
   button, .btn-amiable {
-    transform: scaleY(1.08);
+    transform: scaleY(1.04);
     transform-origin: center;
   }
 

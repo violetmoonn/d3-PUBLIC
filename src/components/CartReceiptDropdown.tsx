@@ -8,7 +8,7 @@ import {
   ArrowRight, 
   Check, 
   Tag, 
-  ShoppingBag, 
+  ShoppingCart, 
   Lock,
   ArrowUpRight
 } from 'lucide-react';
@@ -154,7 +154,10 @@ export const CartReceiptDropdown: React.FC<CartReceiptDropdownProps> = ({
                   <X size={14} />
                 </button>
 
-                <div className="text-[12px] font-bold tracking-[0.2em] uppercase text-black">
+                <div 
+                  style={{ fontFamily: '"Arial Black", "Impact", "Anton", sans-serif', letterSpacing: '-0.02em', fontWeight: 900 }}
+                  className="text-[13px] uppercase text-black"
+                >
                   D3COMPOSURE
                 </div>
                 <div className="text-[9px] uppercase tracking-widest text-black/60 mt-0.5">
@@ -174,11 +177,11 @@ export const CartReceiptDropdown: React.FC<CartReceiptDropdownProps> = ({
               {items.length === 0 ? (
                 <div className="py-8 text-center space-y-3">
                   <div className="w-10 h-10 border border-dashed border-black/20 rounded-full flex items-center justify-center mx-auto text-black/40">
-                    <ShoppingBag size={18} strokeWidth={1.5} />
+                    <ShoppingCart size={18} strokeWidth={1.5} />
                   </div>
                   <div className="space-y-1">
                     <p className="text-[11px] font-medium tracking-wider uppercase text-black">
-                      YOUR BAG IS EMPTY
+                      YOUR CART IS EMPTY
                     </p>
                     <p className="text-[9px] tracking-wide uppercase text-black/50">
                       NO ITEMS SCANNED TO THIS RECEIPT
