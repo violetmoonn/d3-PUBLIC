@@ -58,25 +58,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   };
 
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-
-  // If offline, backend unavailable, or IndexedDB connection closing, do not throw an uncaught exception to avoid crashing onSnapshot listeners
-  if (
-    errCode === 'unavailable' ||
-    errCode === 'failed-precondition' ||
-    errMessage.includes('unavailable') ||
-    errMessage.includes('Could not reach Cloud Firestore backend') ||
-    errMessage.includes('offline') ||
-    errMessage.includes('IDBDatabase') ||
-    errMessage.includes('database connection is closing') ||
-    errMessage.includes('Database closing') ||
-    errMessage.includes('transaction')
-  ) {
-    console.warn(`[Firestore Connection Notice] Operation ${operationType} on ${path}: backend unreachable, offline, or IndexedDB connection closing. Operating in cache/fallback mode.`);
-    return;
-  }
-
-  throw new Error(JSON.stringify(errInfo));
+  console.warn(`[Firestore Notice] Operation ${operationType} on ${path}:`, errMessage);
 }
 
 // Connection test

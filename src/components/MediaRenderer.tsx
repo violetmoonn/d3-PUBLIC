@@ -67,7 +67,13 @@ export const MediaRenderer: React.FC<MediaRendererProps> = ({
     setUsedFallback(false);
     setLoading(true);
     setCurrentSrc(formattedUrl || fallbackUrl);
-  }, [formattedUrl]);
+
+    if (type === 'model3d') {
+      import('@google/model-viewer').catch(() => {
+        console.warn('[Notice] 3D model viewer module unavailable.');
+      });
+    }
+  }, [formattedUrl, type]);
 
   const handleError = () => {
     if (currentSrc.startsWith('/assets/images/')) {
@@ -118,8 +124,8 @@ export const MediaRenderer: React.FC<MediaRendererProps> = ({
   return (
     <div className={`relative ${className} flex items-center justify-center overflow-hidden`}>
       {loading && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-ink/5 backdrop-blur-[2px]">
-          <Loader2 className="animate-spin text-ink/20" size={20} />
+        <div className="absolute inset-0 z-10 bg-black/[0.04] animate-pulse flex items-center justify-center">
+          <div className="w-6 h-6 border-2 border-black/10 border-t-black/40 rounded-full animate-spin" />
         </div>
       )}
       

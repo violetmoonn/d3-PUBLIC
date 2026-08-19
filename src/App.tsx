@@ -43,7 +43,6 @@ import {
   Settings,
   Share,
   ShieldCheck,
-  ShoppingCart,
   Smartphone,
   Sparkles,
   Square,
@@ -85,13 +84,11 @@ import {
   where, 
   writeBatch
 } from './firebase';
-import { GoogleGenAI, Type } from "@google/genai";
 import { Announcement, AppSettings, CartItem, DiscountCode, DriveLink, LogEntry, Order, Product, ProductAsset } from './types';
 import { ProductCard } from './components/EDIT_PRODUCT_UI_HERE';
 import { products as fileProducts } from '../EDIT_PRODUCT_DATA_HERE';
 import { MediaRenderer } from './components/MediaRenderer';
 import { convertGoogleDriveUrl, formatErrorMessage, generateUid, getDriveFileId, safeToFixed, getMathematicalFontSize, getMathematicalLetterTracking, t } from './utils/helpers';
-import '@google/model-viewer';
 
 // Extracted Components
 import { AdminLoginModal } from './components/AdminLoginModal';
@@ -330,6 +327,7 @@ export default function App() {
   const [footerCorporateOpen, setFooterCorporateOpen] = useState(false);
   const [footerLegalHovered, setFooterLegalHovered] = useState(false);
   const [footerLegalOpen, setFooterLegalOpen] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
     let lastScrollY = window.scrollY;
@@ -341,6 +339,7 @@ export default function App() {
         setIsHeaderHidden(false);
       }
       lastScrollY = currentScrollY;
+      setShowScrollTop(currentScrollY > 300);
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
@@ -1370,7 +1369,7 @@ export default function App() {
     try {
       setSuccessMessage(`INITIATING_BULK_IMPORT_${data.length}_ASSETS...`);
       
-      // Fetch Stripe products for matching
+      // Fetch Stripe products for matching if available
       let stripeProducts: any[] = [];
       try {
         const response = await fetch('/api/admin/stripe-data');
@@ -1378,11 +1377,8 @@ export default function App() {
           stripeProducts = await response.json();
         }
       } catch (err) {
-        console.error("Failed to fetch Stripe data for matching:", err);
+        console.warn("Notice: Stripe data unavailable for auto-matching:", err);
       }
-
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const model = "gemini-3-flash-preview";
 
       let importCount = 0;
       for (const item of data) {
@@ -1396,73 +1392,20 @@ export default function App() {
           }
         });
 
-        let matchedStripe: any = null;
-        if (stripeProducts.length > 0) {
-          try {
-            // Use Gemini to match the image with a Stripe product
-            const prompt = `
-              Analyze the attached image and match it to the most relevant product from the Stripe catalog provided below.
-              Use the product name, description, and visual content of the image for matching.
-              
-              Stripe Catalog:
-              ${stripeProducts.map((p, i) => `${i}: ${p.name} - ${p.description}`).join('\n')}
-              
-              Return ONLY the index of the matching product as a number. If no match is found, return -1.
-            `;
-
-            const imgResponse = await fetch(item.converted);
-            const blob = await imgResponse.blob();
-            const base64 = await new Promise<string>((resolve) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.readAsDataURL(blob);
-            });
-            const base64Data = base64.split(',')[1];
-
-            const result = await ai.models.generateContent({
-              model,
-              contents: [
-                {
-                  parts: [
-                    { text: prompt },
-                    { inlineData: { mimeType: blob.type, data: base64Data } }
-                  ]
-                }
-              ],
-              config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                  type: Type.OBJECT,
-                  properties: {
-                    matchIndex: { type: Type.INTEGER }
-                  }
-                }
-              }
-            });
-
-            const json = JSON.parse(result.text);
-            if (json.matchIndex >= 0 && json.matchIndex < stripeProducts.length) {
-              matchedStripe = stripeProducts[json.matchIndex];
-            }
-          } catch (err) {
-            console.error("Gemini matching failed for item:", item.original, err);
-          }
-        }
-
         // Create a product artifact
         const artifactNumber = (products.length + importCount).toString().padStart(3, '0');
         await callAdminApi('POST', '/api/admin/db/products', {
           data: {
-            name: matchedStripe ? matchedStripe.name : `ARTIFACT_#${artifactNumber}`,
-            description: matchedStripe ? matchedStripe.description : "Crafted from 100% organic cotton with a brushed fleece interior. Features a relaxed fit and reinforced ribbing at the cuffs and hems. Made to order in Portugal. Please allow 2 weeks till delivery. The Graphics may be slightly different from the photo. For sizing reference please view the size chart.",
-            price: matchedStripe ? matchedStripe.price : 0,
+            name: `ARTIFACT_#${artifactNumber}`,
+            description: "Crafted from 100% organic cotton with a brushed fleece interior. Features a relaxed fit and reinforced ribbing at the cuffs and hems. Made to order in Portugal. Please allow 2 weeks till delivery. The Graphics may be slightly different from the photo. For sizing reference please view the size chart.",
+            price: 350,
             images: [{ url: item.converted, type: 'image' }],
             category: 'TOPS',
-            stock: matchedStripe ? 100 : 0,
-            is_visible: matchedStripe ? true : false,
-            stripe_product_id: matchedStripe ? matchedStripe.id : '',
-            stripe_payment_link: matchedStripe ? matchedStripe.payment_link : '',
-            stripe_buy_button_id: matchedStripe ? matchedStripe.buy_button_id : ''
+            stock: 100,
+            is_visible: true,
+            stripe_product_id: '',
+            stripe_payment_link: '',
+            stripe_buy_button_id: ''
           }
         });
       }
@@ -1477,41 +1420,12 @@ export default function App() {
   const handleScanDriveFolder = async (folderUrl: string) => {
     setSuccessMessage("SCANNING_DRIVE_FOLDER...");
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const model = "gemini-3-flash-preview";
-      
-      const response = await ai.models.generateContent({
-        model,
-        contents: `
-          List all the direct Google Drive file links found in this folder: ${folderUrl}. 
-          Focus on images and photos. 
-          Extract the file IDs and return them as full shareable URLs in the format: https://drive.google.com/file/d/FILE_ID/view
-          Return a JSON array of strings.
-        `,
-        config: {
-          tools: [{urlContext: {}}],
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              urls: {
-                type: Type.ARRAY,
-                items: { type: Type.STRING }
-              }
-            }
-          }
-        }
-      });
-      
-      const json = JSON.parse(response.text);
-      if (json.urls && json.urls.length > 0) {
-        const importData = json.urls.map((u: string) => ({
-          original: u,
-          converted: convertGoogleDriveUrl(u)
-        }));
-        await handleBulkImport(importData);
+      const fileId = getDriveFileId(folderUrl);
+      if (fileId) {
+        const converted = convertGoogleDriveUrl(folderUrl);
+        await handleBulkImport([{ original: folderUrl, converted }]);
       } else {
-        setGlobalError("NO_FILES_FOUND_IN_FOLDER. ENSURE_FOLDER_IS_PUBLIC.");
+        setGlobalError("INVALID_FOLDER_OR_FILE_URL. PLEASE_PASTE_A_VALID_GOOGLE_DRIVE_LINK.");
       }
     } catch (err) {
       console.error("Folder scan failed:", err);
@@ -2099,10 +2013,9 @@ export default function App() {
                                 const targetProduct = products.find(p => p.id === provProduct.id);
                                 if (targetProduct) setSelectedProduct(targetProduct);
                               }}
-                              className="px-6 py-2.5 bg-ink text-paper hover:bg-zinc-800 transition-all font-mono text-[9px] font-bold tracking-widest uppercase flex items-center gap-2 mx-auto sm:mx-0 cursor-pointer"
+                              className="px-6 py-2.5 bg-ink text-paper hover:bg-zinc-800 transition-all font-sans text-[10px] font-bold tracking-widest uppercase flex items-center justify-center mx-auto sm:mx-0 cursor-pointer"
                             >
-                              <ShoppingCart size={12} />
-                              VIEW / PURCHASE ARTIFACT
+                              <span>VIEW / PURCHASE ARTIFACT</span>
                             </button>
                           </div>
                         </div>
@@ -2607,6 +2520,25 @@ export default function App() {
         onClose={() => setIsWaitlistPopupOpen(false)}
         onSubscribe={handleSubscribeWaitlist}
       />
+
+      {/* Subtle Scroll to Top Button */}
+      <AnimatePresence>
+        {showScrollTop && (
+          <motion.button
+            initial={{ opacity: 0, y: 12, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 12, scale: 0.9 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="fixed bottom-6 right-6 z-40 w-9 h-9 sm:w-10 sm:h-10 bg-white/95 hover:bg-white text-black border border-black/15 shadow-md hover:shadow-lg rounded-full flex items-center justify-center cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 group"
+            aria-label="Scroll to top"
+            title="Scroll to top"
+            id="scroll-to-top-btn"
+          >
+            <ArrowUp size={15} className="transition-transform group-hover:-translate-y-0.5 text-black" strokeWidth={2} />
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       {/* Admin Specific Modals */}
       {isAdmin && (

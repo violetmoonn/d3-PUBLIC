@@ -89,16 +89,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                         transition={{ delay: idx * 0.05 }}
                         className="flex gap-3 items-center justify-between group py-1 border-b border-ink/5"
                       >
-                        {/* Image & details */}
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-11 h-11 bg-soft border border-ink/5 overflow-hidden flex-shrink-0">
-                            <img 
-                              src={(item.images?.[0] as any)?.url || item.images?.[0]} 
-                              alt={item.name} 
-                              className="w-full h-full object-cover"
-                              referrerPolicy="no-referrer"
-                            />
-                          </div>
+                        {/* Details */}
+                        <div className="flex items-center min-w-0">
                           <div className="min-w-0">
                             <h4 className="text-[10px] font-bold uppercase tracking-wider text-ink truncate max-w-[140px] sm:max-w-[170px]">
                               {item.name}

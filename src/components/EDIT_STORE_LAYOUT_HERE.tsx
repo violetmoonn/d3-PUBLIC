@@ -95,7 +95,7 @@ export const StoreView: React.FC<StoreViewProps> = ({
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
                   onClick={onAddProduct}
-                  className="px-6 py-3 border border-dashed border-ink/30 flex items-center gap-2 hover:border-ink hover:bg-ink/5 transition-all text-ink/60 hover:text-ink text-xs font-mono uppercase tracking-widest"
+                  className="px-6 py-3 border border-dashed border-ink/30 flex items-center gap-2 hover:border-ink hover:bg-ink/5 transition-all text-ink/60 hover:text-ink text-xs font-sans uppercase tracking-widest font-medium"
                 >
                   <Plus size={16} />
                   <span>ADD NEW ARTIFACT</span>
@@ -135,8 +135,8 @@ export const StoreView: React.FC<StoreViewProps> = ({
                   <Plus size={24} />
                 </div>
                 <div className="text-center px-4">
-                  <p className="text-[10px] font-mono tracking-[0.2em] uppercase">NEW ARTIFACT</p>
-                  <p className="text-[8px] font-mono opacity-60 uppercase mt-2">CLICK TO CREATE</p>
+                  <p className="text-[10px] font-sans font-medium tracking-[0.2em] uppercase">NEW ARTIFACT</p>
+                  <p className="text-[8px] font-sans opacity-60 uppercase mt-2">CLICK TO CREATE</p>
                 </div>
               </motion.button>
             )}
