@@ -440,11 +440,14 @@ Provide warm, elegant, clear, and direct customer assistance. Keep responses con
     }
   });
 
-  // Ensure uploads directory exists
-  const uploadsDir = path.join(process.cwd(), "public", "uploads");
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-  }
+  // Ensure static asset directories exist
+  const publicDir = path.join(process.cwd(), "public");
+  const uploadsDir = path.join(publicDir, "uploads");
+  const assetsDir = path.join(publicDir, "assets");
+  const imagesDir = path.join(assetsDir, "images");
+
+  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+  if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true });
 
   // Configure Multer
   const storage = multer.diskStorage({
@@ -461,8 +464,37 @@ Provide warm, elegant, clear, and direct customer assistance. Keep responses con
     limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
   });
 
-  // Serve static files from public/uploads
+  // Serve static files with permissive fallback
   app.use("/uploads", express.static(uploadsDir));
+  app.use("/assets/images", express.static(imagesDir));
+  app.use("/assets", express.static(assetsDir));
+  app.use(express.static(publicDir));
+
+  // Direct image route fallback for URL-encoded and alternate paths
+  app.get(["/assets/images/:filename", "/uploads/:filename", "/:filename"], (req, res, next) => {
+    const filename = req.params.filename;
+    if (!filename || !filename.match(/\.(png|jpg|jpeg|webp|gif|svg|mp4|webm)$/i)) {
+      return next();
+    }
+    const sanitized = filename.replace(/ /g, '_').replace(/:/g, '_');
+    const candidates = [
+      path.join(imagesDir, filename),
+      path.join(imagesDir, sanitized),
+      path.join(uploadsDir, filename),
+      path.join(uploadsDir, sanitized),
+      path.join(publicDir, filename),
+      path.join(publicDir, sanitized),
+      path.join(imagesDir, "IMG_4800_1_3.png"),
+      path.join(imagesDir, "black_hoodie_tracksuit.jpg")
+    ];
+
+    for (const filePath of candidates) {
+      if (fs.existsSync(filePath)) {
+        return res.sendFile(filePath);
+      }
+    }
+    next();
+  });
 
 
   app.post("/api/auth/token", async (req, res) => {

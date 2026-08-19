@@ -120,6 +120,7 @@ import { SurgicalVideosView } from './components/SurgicalVideosView';
 import { HomeView } from './components/HomeView';
 import { CookieConsent } from './components/CookieConsent';
 import { STORE_LOCATIONS } from './components/StoreLocationSelector';
+import { AirtableStorefront } from './components/AirtableStorefront';
 
 // --- Constants & Helpers ---
 
@@ -2116,6 +2117,22 @@ export default function App() {
             <SustainabilityView onNavigate={setView} />
           )}
 
+          {view === 'airtable' && (
+            <motion.div
+              key="airtable"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="max-w-[1440px] mx-auto px-4 sm:px-6 md:px-8 py-6"
+            >
+              <AirtableStorefront 
+                defaultHeight={720}
+                title="Airtable Storefront"
+                subtitle="Live synced products, photography, and artifact inventory directly from Airtable"
+              />
+            </motion.div>
+          )}
+
           {view === 'cart' && (
             <CartView 
               items={cart}
@@ -2150,7 +2167,8 @@ export default function App() {
                     { id: 'home', label: t('home') || 'Home' },
                     { id: 'store', label: t('store') || 'Shop' },
                     { id: 'cart', label: 'Shopping Bag' },
-                    { id: 'gallery', label: t('gallery') || 'Gallery' }
+                    { id: 'gallery', label: t('gallery') || 'Gallery' },
+                    { id: 'airtable', label: 'Airtable' }
                   ]
                     .filter(link => !settings.sections || settings.sections[link.id] !== false)
                     .sort((a, b) => a.label.localeCompare(b.label))

@@ -274,7 +274,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <MediaRenderer 
               key={activeAsset.url || safeIdx}
               asset={activeAsset} 
-              fallbackUrl={product.provenanceImage}
+              fallbackUrl={product.provenanceImage || '/assets/images/IMG_4800_1_3.png'}
               className={`w-full h-full object-contain p-4 bg-transparent contrast-[1.05] transition-opacity duration-300 ${totalPhotos > 1 && safeIdx === 0 ? 'group-hover:opacity-0' : ''}`} 
             />
             {totalPhotos > 1 && safeIdx === 0 && productPhotos[1] && (
@@ -282,7 +282,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 <MediaRenderer 
                   key={productPhotos[1].url || 1}
                   asset={productPhotos[1]} 
-                  fallbackUrl={product.provenanceImage}
+                  fallbackUrl={product.provenanceImage || '/assets/images/IMG_3215_3_3.png'}
                   className="w-full h-full object-contain p-4 bg-transparent contrast-[1.05]" 
                 />
               </div>

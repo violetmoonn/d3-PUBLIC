@@ -159,6 +159,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'home', label: t('home') || 'Home' },
     { id: 'store', label: t('store') || 'Shop' },
     { id: 'gallery', label: t('gallery') || 'Gallery' },
+    { id: 'airtable', label: 'Airtable' },
   ].filter(link => !settings.sections || settings.sections[link.id] !== false);
 
   const corporateLinks = [

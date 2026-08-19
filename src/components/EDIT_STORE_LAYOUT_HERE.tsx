@@ -8,11 +8,12 @@
  * ============================================================================
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Plus } from 'lucide-react';
+import { Plus, Layers, Grid } from 'lucide-react';
 import { AppSettings, Product } from '../types';
 import { ProductCard } from './EDIT_PRODUCT_UI_HERE';
+import { AirtableStorefront } from './AirtableStorefront';
 
 interface StoreViewProps {
   settings: AppSettings;
@@ -57,6 +58,7 @@ export const StoreView: React.FC<StoreViewProps> = ({
   onAddProduct,
   onOpenSubmission
 }) => {
+  const [storeTab, setStoreTab] = useState<'store' | 'airtable'>('store');
   const isSingleProduct = filteredProducts.length === 1;
 
   return (
@@ -65,11 +67,47 @@ export const StoreView: React.FC<StoreViewProps> = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="space-y-8"
+      className="space-y-6"
     >
-      <div className="max-w-[1440px] mx-auto px-[var(--spacing-phi-5)] sm:px-[var(--spacing-phi-6)] md:px-[var(--spacing-phi-7)] pt-4">
-        {isSingleProduct ? (
-          <div className="flex flex-col items-center justify-center w-full py-2 sm:py-6 md:py-10">
+      <div className="max-w-[1440px] mx-auto px-[var(--spacing-phi-5)] sm:px-[var(--spacing-phi-6)] md:px-[var(--spacing-phi-7)] pt-2">
+        {/* Store Subheader / View Tabs */}
+        <div className="flex items-center justify-center mb-6">
+          <div className="inline-flex items-center gap-1.5 p-1 bg-ink/5 rounded-xs border border-ink/10">
+            <button
+              onClick={() => setStoreTab('store')}
+              className={`px-3 py-1.5 text-[11px] font-normal uppercase tracking-wider transition-all rounded-xs cursor-pointer flex items-center gap-1.5 ${
+                storeTab === 'store'
+                  ? 'bg-white text-black shadow-xs font-medium'
+                  : 'text-ink/60 hover:text-ink'
+              }`}
+            >
+              <Grid size={12} />
+              <span>COLLECTION</span>
+            </button>
+            <button
+              onClick={() => setStoreTab('airtable')}
+              className={`px-3 py-1.5 text-[11px] font-normal uppercase tracking-wider transition-all rounded-xs cursor-pointer flex items-center gap-1.5 ${
+                storeTab === 'airtable'
+                  ? 'bg-white text-black shadow-xs font-medium'
+                  : 'text-ink/60 hover:text-ink'
+              }`}
+            >
+              <Layers size={12} />
+              <span>AIRTABLE STOREFRONT</span>
+            </button>
+          </div>
+        </div>
+
+        {storeTab === 'airtable' ? (
+          <div className="py-2">
+            <AirtableStorefront 
+              defaultHeight={680}
+              title="Live Airtable Storefront"
+              subtitle="Directly connected to your Airtable product base and high-resolution media gallery"
+            />
+          </div>
+        ) : isSingleProduct ? (
+          <div className="flex flex-col items-center justify-center w-full py-2 sm:py-6 md:py-8">
             <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl">
               <ProductCard 
                 key={filteredProducts[0].id || `${filteredProducts[0].name}-0`} 

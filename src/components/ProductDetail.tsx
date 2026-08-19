@@ -286,7 +286,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                       >
                         <MediaRenderer 
                           asset={product.images?.[activeImage]} 
-                          fallbackUrl={product.provenanceImage}
+                          fallbackUrl={product.provenanceImage || '/assets/images/IMG_4800_1_3.png'}
                           className="w-full h-full object-contain transition-all duration-500"
                         />
                       </motion.div>

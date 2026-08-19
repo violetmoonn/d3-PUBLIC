@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Activity, ChevronLeft, ChevronRight, LayoutGrid, LogOut, Package, Settings, MessageSquare, UserCheck, Database, Megaphone, PlusCircle } from 'lucide-react';
+import { Activity, ChevronLeft, ChevronRight, LayoutGrid, LogOut, Package, Settings, MessageSquare, UserCheck, Database, Megaphone, PlusCircle, Layers } from 'lucide-react';
 import { Announcement, AppSettings, DiscountCode, DriveLink, LogEntry, Order, Product } from '../../types';
 import { HeroTab } from './HeroTab';
 import { ProductsTab } from './ProductsTab';
@@ -10,6 +10,7 @@ import { TransmissionsTab } from './TransmissionsTab';
 import { WaitlistTab, WaitlistEntry } from './WaitlistTab';
 import { D3CatalogCmsTab } from './D3CatalogCmsTab';
 import { ArtifactCreatorTab } from './ArtifactCreatorTab';
+import { AirtableStorefront } from '../AirtableStorefront';
 
 interface AdminDashboardProps {
   products: Product[];
@@ -113,6 +114,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const tabs = [
     { id: 'NEW_ARTIFACT', icon: PlusCircle, label: '+ NEW ARTIFACT' },
     { id: 'CATALOG_CMS', icon: Database, label: 'D3 CATALOG CMS' },
+    { id: 'AIRTABLE_SYNC', icon: Layers, label: 'AIRTABLE SYNC' },
     { id: 'PRODUCTS', icon: Package, label: 'PRODUCTS' },
     { id: 'TRANSMISSIONS', icon: MessageSquare, label: 'TRANSMISSIONS' },
     { id: 'WAITLIST', icon: UserCheck, label: 'WAITING LIST' },
@@ -294,6 +296,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
               {activeTab === 'CATALOG_CMS' && (
                 <D3CatalogCmsTab />
+              )}
+
+              {activeTab === 'AIRTABLE_SYNC' && (
+                <div className="p-6 sm:p-8 space-y-6">
+                  <AirtableStorefront 
+                    defaultHeight={740}
+                    title="Live Airtable Inventory & Media Sync"
+                    subtitle="Direct live access to your Airtable base (appU8lAjcTDz63elZ) for managing products and media assets"
+                  />
+                </div>
               )}
 
               {activeTab === 'HERO' && (
