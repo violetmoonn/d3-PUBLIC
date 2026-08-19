@@ -6,10 +6,39 @@ import firebaseConfig from '../firebase-applet-config.json';
 
 // Initialize Firebase SDK
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId || undefined);
+export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
+
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.addScope('https://www.googleapis.com/auth/drive.readonly');
+googleProvider.addScope('https://www.googleapis.com/auth/drive.file');
+
+// In-memory access token cache for Google Workspace
+let cachedDriveAccessToken: string | null = null;
+let isSigningInWithDrive = false;
+
+export const getGoogleDriveAccessToken = (): string | null => cachedDriveAccessToken;
+
+export const signInWithGoogleDrive = async (): Promise<{ user: any; accessToken: string }> => {
+  try {
+    isSigningInWithDrive = true;
+    const result = await signInWithPopup(auth, googleProvider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (!credential?.accessToken) {
+      throw new Error('Failed to acquire Google Drive access token');
+    }
+    cachedDriveAccessToken = credential.accessToken;
+    return { user: result.user, accessToken: cachedDriveAccessToken };
+  } finally {
+    isSigningInWithDrive = false;
+  }
+};
+
+export const signOutGoogleDrive = async (): Promise<void> => {
+  cachedDriveAccessToken = null;
+  await signOut(auth);
+};
 
 export enum OperationType {
   CREATE = 'create',

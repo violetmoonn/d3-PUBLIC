@@ -27,6 +27,7 @@ interface NavbarProps {
   onUpdateQuantity?: (id: string | number, size: string, quantity: number) => void;
   onUpdateSize?: (id: string | number, oldSize: string, newSize: string) => void;
   onOpenAdmin: () => void;
+  onOpenAirtable?: () => void;
   onOpenSubmission: () => void;
   isAdmin: boolean;
   searchTerm: string;
@@ -55,6 +56,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onUpdateQuantity,
   onUpdateSize,
   onOpenAdmin, 
+  onOpenAirtable,
   onOpenSubmission,
   isAdmin, 
   searchTerm, 
@@ -159,7 +161,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'home', label: t('home') || 'Home' },
     { id: 'store', label: t('store') || 'Shop' },
     { id: 'gallery', label: t('gallery') || 'Gallery' },
-    { id: 'airtable', label: 'Airtable' },
   ].filter(link => !settings.sections || settings.sections[link.id] !== false);
 
   const corporateLinks = [

@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product } from '../types';
 import { MediaRenderer } from './MediaRenderer';
-import { AirtableStorefront } from './AirtableStorefront';
-import { Maximize2, Grid, ChevronLeft, ChevronRight, X, Sparkles, ArrowRight, Eye, Layers } from 'lucide-react';
+import { Maximize2, Grid, ChevronLeft, ChevronRight, X, Sparkles, ArrowRight, Eye } from 'lucide-react';
 
 interface GalleryViewProps {
   products: Product[];
@@ -21,7 +20,7 @@ interface LookbookItem {
 }
 
 export function GalleryView({ products, onSelectProduct }: GalleryViewProps) {
-  const [viewMode, setViewMode] = useState<'lookbook' | 'grid' | 'airtable'>('lookbook');
+  const [viewMode, setViewMode] = useState<'lookbook' | 'grid'>('lookbook');
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number | null>(null);
   const [activeFilter, setActiveFilter] = useState<string>('ALL');
 
@@ -116,21 +115,10 @@ export function GalleryView({ products, onSelectProduct }: GalleryViewProps) {
             >
               Grid
             </button>
-            <button
-              onClick={() => setViewMode('airtable')}
-              className={`px-3 py-1 text-xs font-medium transition-all rounded cursor-pointer flex items-center gap-1.5 ${
-                viewMode === 'airtable'
-                  ? 'bg-white text-black shadow-xs'
-                  : 'text-ink/60 hover:text-ink'
-              }`}
-            >
-              <Layers size={12} />
-              <span>Airtable Catalog</span>
-            </button>
           </div>
 
           {/* Filter Categories */}
-          {viewMode !== 'airtable' && categories.length > 2 && (
+          {categories.length > 2 && (
             <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
               {categories.map((cat) => (
                 <button
@@ -149,17 +137,6 @@ export function GalleryView({ products, onSelectProduct }: GalleryViewProps) {
           )}
         </div>
       </div>
-
-      {/* 0. AIRTABLE STOREFRONT MODE */}
-      {viewMode === 'airtable' && (
-        <div className="py-2">
-          <AirtableStorefront 
-            defaultHeight={700}
-            title="Airtable Storefront & High-Resolution Assets"
-            subtitle="Explore high-definition product imagery, inventory batches, and lookbook media directly synced with Airtable"
-          />
-        </div>
-      )}
 
       {/* 1. LOOKBOOK EDITORIAL SPREAD MODE */}
       {viewMode === 'lookbook' && (

@@ -109,6 +109,7 @@ import { SuccessOverlay } from './components/SuccessOverlay';
 import { ProductModal } from './components/modals/ProductModal';
 import { UserArtifactSubmissionModal } from './components/modals/UserArtifactSubmissionModal';
 import { BulkDriveImportModal } from './components/modals/BulkDriveImportModal';
+import { GoogleDrivePublisherModal } from './components/modals/GoogleDrivePublisherModal';
 import { SizeChartModal } from './components/modals/SizeChartModal';
 import { SubscribeListModal } from './components/modals/SubscribeListModal';
 import { FooterNewsletter } from './components/FooterNewsletter';
@@ -121,6 +122,7 @@ import { HomeView } from './components/HomeView';
 import { CookieConsent } from './components/CookieConsent';
 import { STORE_LOCATIONS } from './components/StoreLocationSelector';
 import { AirtableStorefront } from './components/AirtableStorefront';
+import { AirtableStorefrontModal } from './components/modals/AirtableStorefrontModal';
 
 // --- Constants & Helpers ---
 
@@ -552,6 +554,9 @@ export default function App() {
   const [isUserSubmissionOpen, setIsUserSubmissionOpen] = useState(false);
   const [focusedProductId, setFocusedProductId] = useState<string | null>(null);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [isDrivePublisherOpen, setIsDrivePublisherOpen] = useState(false);
+  const [drivePublisherTargetProdId, setDrivePublisherTargetProdId] = useState<string | undefined>(undefined);
+  const [isAirtableModalOpen, setIsAirtableModalOpen] = useState(false);
   const [isSizeChartOpen, setIsSizeChartOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
   const [orderSuccess, setOrderSuccess] = useState<Order | null>(null);
@@ -1227,6 +1232,106 @@ export default function App() {
     }
   };
 
+  const handlePublishNewProductFromDrive = async (productData: {
+    name: string;
+    description: string;
+    price: number;
+    category: string;
+    images: { url: string; type: string; created_at: string; uid: string }[];
+  }) => {
+    try {
+      const newProd: Partial<Product> = {
+        name: productData.name,
+        description: productData.description,
+        price: productData.price || 350,
+        category: productData.category || 'ARTIFACT',
+        images: productData.images.map(img => ({
+          url: img.url,
+          type: (img.type === 'video' ? 'video' : 'image') as any,
+          uid: img.uid || generateUid(),
+          created_at: img.created_at
+        })),
+        stock: 50,
+        is_visible: true
+      };
+
+      // Direct post to keyless /api/products endpoint for immediate sync
+      try {
+        await fetch('/api/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newProd)
+        });
+      } catch (apiErr) {
+        console.warn('API sync notification:', apiErr);
+      }
+
+      await handleAddProduct(newProd);
+
+      // Record drive link assets in repository
+      for (const img of productData.images) {
+        try {
+          await callAdminApi('POST', '/api/admin/db/drive_links', {
+            data: {
+              original_url: img.url,
+              converted_url: img.url,
+              file_id: getDriveFileId(img.url) || 'GOOGLE_DRIVE_PHOTO'
+            }
+          });
+        } catch {
+          // ignore duplicate link errors
+        }
+      }
+
+      setSuccessMessage(`PRODUCT "${productData.name}" PUBLISHED TO STOREFRONT`);
+      logActivity("GOOGLE_DRIVE_PRODUCT_PUBLISH", `Published ${productData.name} from Google Drive`, 'SUCCESS');
+    } catch (err: any) {
+      console.error("Drive product publish error:", err);
+      setGlobalError(err.message || "Failed to publish product from Google Drive");
+      throw err;
+    }
+  };
+
+  const handleAttachDrivePhotosToProduct = async (
+    productId: string,
+    images: { url: string; type: string; created_at: string; uid: string }[],
+    setAsCover: boolean = false
+  ) => {
+    try {
+      const target = products.find(p => p.id === productId);
+      if (!target) throw new Error("Target product not found");
+
+      const newAssets: ProductAsset[] = images.map(img => ({
+        url: img.url,
+        type: (img.type === 'video' ? 'video' : 'image') as any,
+        uid: img.uid || generateUid(),
+        created_at: img.created_at
+      }));
+
+      let updatedImages: ProductAsset[];
+      if (setAsCover) {
+        const otherImages = (target.images || []).filter(img => !images.some(ni => ni.url === img.url));
+        updatedImages = [...newAssets, ...otherImages];
+      } else {
+        const existing = target.images || [];
+        updatedImages = [...existing, ...newAssets];
+        updatedImages.sort((a: any, b: any) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+      }
+
+      await handleUpdateProduct({
+        id: productId,
+        images: updatedImages
+      });
+
+      setSuccessMessage(`PHOTOS ATTACHED TO ${target.name}`);
+      logActivity("GOOGLE_DRIVE_ATTACH_PHOTOS", `Attached ${images.length} Drive photos to ${target.name}`, 'SUCCESS');
+    } catch (err: any) {
+      console.error("Drive attach photos error:", err);
+      setGlobalError(err.message || "Failed to attach photos to product");
+      throw err;
+    }
+  };
+
   const handleSaveSettings = async (updates: Partial<AppSettings>) => {
     try {
       // Update local state immediately for better UX
@@ -1529,6 +1634,7 @@ export default function App() {
           onUpdateSize={updateCartSize}
           onOpenCart={() => { setView('cart'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
           onOpenAdmin={() => isAdmin ? setView('admin') : setIsAdminLoginOpen(true)}
+          onOpenAirtable={() => setIsAirtableModalOpen(true)}
           onOpenSubmission={() => {
             setIsUserSubmissionOpen(true);
           }}
@@ -1670,6 +1776,7 @@ export default function App() {
                 onSaveSettings={handleSaveSettings}
                 onOpenProductModal={(p) => { setEditingProduct(p || null); setIsProductModalOpen(true); }}
                 onOpenBulkImport={() => setIsBulkImportOpen(true)}
+                onOpenDrivePublisher={() => setIsDrivePublisherOpen(true)}
                 onFocusProduct={(id) => {
                   setFocusedProductId(id);
                   setAdminTab('PRODUCTS');
@@ -2183,7 +2290,6 @@ export default function App() {
                     { id: 'store', label: t('store') || 'Shop' },
                     { id: 'cart', label: 'Shopping Bag' },
                     { id: 'gallery', label: t('gallery') || 'Gallery' },
-                    { id: 'airtable', label: 'Airtable' }
                   ]
                     .filter(link => !settings.sections || settings.sections[link.id] !== false)
                     .sort((a, b) => a.label.localeCompare(b.label))
@@ -2516,6 +2622,12 @@ export default function App() {
         onGoogleLogin={handleGoogleLogin}
         password={adminPassword}
         setPassword={setAdminPassword}
+        onOpenAirtable={() => setIsAirtableModalOpen(true)}
+      />
+
+      <AirtableStorefrontModal
+        isOpen={isAirtableModalOpen}
+        onClose={() => setIsAirtableModalOpen(false)}
       />
 
       <CheckoutModal 
@@ -2595,6 +2707,18 @@ export default function App() {
             onClose={() => setIsBulkImportOpen(false)}
             onImport={handleBulkImport}
             onScanFolder={handleScanDriveFolder}
+          />
+          <GoogleDrivePublisherModal
+            isOpen={isDrivePublisherOpen}
+            onClose={() => {
+              setIsDrivePublisherOpen(false);
+              setDrivePublisherTargetProdId(undefined);
+            }}
+            products={products}
+            targetProductId={drivePublisherTargetProdId}
+            onPublishNewProduct={handlePublishNewProductFromDrive}
+            onAttachToProduct={handleAttachDrivePhotosToProduct}
+            onAddDriveLink={handleAddDriveLink}
           />
         </>
       )}

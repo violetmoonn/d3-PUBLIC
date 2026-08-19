@@ -11,6 +11,7 @@ import { WaitlistTab, WaitlistEntry } from './WaitlistTab';
 import { D3CatalogCmsTab } from './D3CatalogCmsTab';
 import { ArtifactCreatorTab } from './ArtifactCreatorTab';
 import { AirtableStorefront } from '../AirtableStorefront';
+import { DriveLinksTab } from './DriveLinksTab';
 
 interface AdminDashboardProps {
   products: Product[];
@@ -39,6 +40,7 @@ interface AdminDashboardProps {
   onSaveSettings: (settings: AppSettings) => Promise<void>;
   onOpenProductModal: (product?: Partial<Product>) => void;
   onOpenBulkImport: () => void;
+  onOpenDrivePublisher?: () => void;
   onFocusProduct: (id: string) => void;
   onDeleteDriveLink: (id: string) => Promise<void>;
   onAddDriveLink: (url: string, productId?: string) => Promise<void>;
@@ -85,6 +87,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onSaveSettings,
   onOpenProductModal,
   onOpenBulkImport,
+  onOpenDrivePublisher,
   onFocusProduct,
   onDeleteDriveLink,
   onAddDriveLink,
@@ -113,6 +116,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const tabs = [
     { id: 'NEW_ARTIFACT', icon: PlusCircle, label: '+ NEW ARTIFACT' },
+    { id: 'DRIVE_PHOTOS', icon: Database, label: 'DRIVE PHOTOS & LINKS' },
     { id: 'CATALOG_CMS', icon: Database, label: 'D3 CATALOG CMS' },
     { id: 'AIRTABLE_SYNC', icon: Layers, label: 'AIRTABLE SYNC' },
     { id: 'PRODUCTS', icon: Package, label: 'PRODUCTS' },
@@ -291,6 +295,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   setGlobalError={(msg) => msg && addLog(msg, 'error')}
                   setSuccessMessage={(msg) => msg && addLog(msg, 'success')}
                   onNavigateToProducts={() => onTabChange ? onTabChange('PRODUCTS') : null}
+                />
+              )}
+
+              {activeTab === 'DRIVE_PHOTOS' && (
+                <DriveLinksTab 
+                  driveLinks={driveLinks}
+                  products={products}
+                  onDelete={onDeleteDriveLink}
+                  onAdd={onAddDriveLink}
+                  onBulkImport={onOpenBulkImport}
+                  onOpenDrivePublisher={onOpenDrivePublisher}
                 />
               )}
 

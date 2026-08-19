@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Globe, Trash2, ExternalLink, Copy, Check, Search, Database, Link as LinkIcon, RefreshCw } from 'lucide-react';
+import { Globe, Trash2, ExternalLink, Copy, Check, Search, Database, Link as LinkIcon, RefreshCw, UploadCloud, Sparkles } from 'lucide-react';
 import { DriveLink, Product } from '../../types';
 
 interface DriveLinksTabProps {
@@ -9,9 +9,10 @@ interface DriveLinksTabProps {
   onDelete: (id: string) => Promise<void>;
   onAdd: (url: string, productId?: string) => Promise<void>;
   onBulkImport: () => void;
+  onOpenDrivePublisher?: () => void;
 }
 
-export const DriveLinksTab: React.FC<DriveLinksTabProps> = ({ driveLinks, products, onDelete, onAdd, onBulkImport }) => {
+export const DriveLinksTab: React.FC<DriveLinksTabProps> = ({ driveLinks, products, onDelete, onAdd, onBulkImport, onOpenDrivePublisher }) => {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [newUrl, setNewUrl] = React.useState('');
   const [selectedProductId, setSelectedProductId] = React.useState<string>('');
@@ -59,16 +60,47 @@ export const DriveLinksTab: React.FC<DriveLinksTabProps> = ({ driveLinks, produc
           </div>
           <div>
             <h2 className="text-3xl font-display tracking-tighter uppercase">DRIVE LINK REPOSITORY</h2>
-            <p className="text-[10px] font-mono uppercase opacity-40 tracking-widest">Manage converted Google Drive assets.</p>
+            <p className="text-[10px] font-mono uppercase opacity-40 tracking-widest">Access Google Drive photos, manage links, and publish to storefront.</p>
           </div>
         </div>
-        <button 
-          onClick={onBulkImport}
-          className="px-8 py-3 bg-ink text-paper text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all flex items-center gap-2"
-        >
-          <Database size={14} /> NEW IMPORT
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          {onOpenDrivePublisher && (
+            <button 
+              onClick={onOpenDrivePublisher}
+              className="px-6 py-3 bg-ink text-paper text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all flex items-center gap-2 shadow-sm"
+            >
+              <UploadCloud size={14} /> DRIVE PHOTO PUBLISHER
+            </button>
+          )}
+          <button 
+            onClick={onBulkImport}
+            className="px-6 py-3 border border-ink/20 text-ink text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-ink hover:text-paper transition-all flex items-center gap-2"
+          >
+            <Database size={14} /> BULK IMPORT
+          </button>
+        </div>
       </div>
+
+      {/* Google Drive Direct Access Hero Banner */}
+      {onOpenDrivePublisher && (
+        <div className="p-6 bg-ink/[0.03] border border-ink/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-ink font-bold text-xs font-mono tracking-wider uppercase">
+              <Sparkles size={14} />
+              <span>LIVE GOOGLE DRIVE PHOTO INTEGRATION & PUBLISHING</span>
+            </div>
+            <p className="text-[10px] font-mono opacity-60 uppercase">
+              Browse photos directly from your connected Google Drive or upload new files to instantly generate storefront product cards.
+            </p>
+          </div>
+          <button
+            onClick={onOpenDrivePublisher}
+            className="px-6 py-3 bg-ink text-paper text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all shrink-0 flex items-center gap-2"
+          >
+            <UploadCloud size={14} /> OPEN DRIVE PHOTOS
+          </button>
+        </div>
+      )}
 
       <div className="relative">
         <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30" />

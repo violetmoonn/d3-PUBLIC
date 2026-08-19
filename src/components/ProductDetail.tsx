@@ -385,7 +385,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                       <div className="mt-3 flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
                         <span className="text-[10px] font-sans font-normal uppercase tracking-wider text-ink/70">
-                          IN STOCK • READY TO DISPATCH
+                          IN STOCK
                         </span>
                       </div>
 
