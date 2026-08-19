@@ -38,15 +38,15 @@ async function seed() {
 
     // 2. Add or Update products from the file
     for (const p of products) {
-      // Convert images to direct links
+      // Convert images to universal direct links
       const images = (p.images || []).map(img => {
         if (!img.url) return img;
-        const driveRegex = /\/file\/d\/([^\/]+)/;
+        const driveRegex = /\/file\/d\/([a-zA-Z0-9_-]+)/;
         const match = img.url.match(driveRegex);
         if (match && match[1]) {
           return {
             ...img,
-            url: `https://lh3.googleusercontent.com/u/0/d/${match[1]}=w1000`
+            url: `https://drive.google.com/thumbnail?id=${match[1].split('?')[0]}&sz=w2000`
           };
         }
         return img;

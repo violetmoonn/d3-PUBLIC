@@ -646,6 +646,38 @@ Provide warm, elegant, clear, and direct customer assistance. Keep responses con
     });
   });
 
+  // Image Proxy to reliably fetch and convert external image URLs for Vercel hosting
+  app.get("/api/image-proxy", async (req, res) => {
+    const rawUrl = req.query.url as string;
+    if (!rawUrl) return res.status(400).json({ error: "Missing url parameter" });
+
+    try {
+      const targetUrl = convertGoogleDriveUrl(rawUrl);
+      if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+        return res.redirect(targetUrl);
+      }
+
+      const response = await fetch(targetUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      });
+
+      if (!response.ok) {
+        return res.status(response.status).json({ error: `Failed to fetch image: ${response.statusText}` });
+      }
+
+      const contentType = response.headers.get('content-type') || 'image/jpeg';
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+
+      const arrayBuffer = await response.arrayBuffer();
+      res.send(Buffer.from(arrayBuffer));
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to proxy image" });
+    }
+  });
+
   app.get("/api/admin/stripe-data", authMiddleware, async (req, res) => {
     if (!stripe) return res.status(500).json({ error: "Stripe not configured" });
     try {
@@ -1435,20 +1467,38 @@ Provide warm, elegant, clear, and direct customer assistance. Keep responses con
 
   seedAdjustments.forEach(adj => cmsAdjustmentsMap.set(adj.id, adj));
 
-  // Helper to parse Google Drive URLs to direct viewable links
+  // Helper to parse Google Drive and external media URLs to direct viewable links
   function convertGoogleDriveUrl(url: string): string {
     if (!url) return url;
-    const driveRegex = /\/file\/d\/([^\/]+)/;
-    const match = url.match(driveRegex);
+    const trimmed = url.trim();
+
+    // Google Drive
+    const driveRegex = /\/file\/d\/([a-zA-Z0-9_-]+)/;
+    const match = trimmed.match(driveRegex);
     if (match && match[1]) {
-      const fileId = match[1].split('?')[0].split('/')[0];
-      return `https://lh3.googleusercontent.com/u/0/d/${fileId}=w1000`;
+      const fileId = match[1].split('?')[0];
+      return `https://drive.google.com/thumbnail?id=${fileId}&sz=w2000`;
     }
-    const idMatch = url.match(/[?&]id=([^&]+)/);
+    const idMatch = trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/);
     if (idMatch && idMatch[1]) {
-      return `https://lh3.googleusercontent.com/u/0/d/${idMatch[1]}=w1000`;
+      const fileId = idMatch[1].split('&')[0];
+      return `https://drive.google.com/thumbnail?id=${fileId}&sz=w2000`;
     }
-    return url;
+
+    // Dropbox
+    if (trimmed.includes('dropbox.com')) {
+      if (trimmed.includes('dl.dropboxusercontent.com')) return trimmed;
+      if (trimmed.includes('?dl=0')) return trimmed.replace('?dl=0', '?raw=1');
+      if (trimmed.includes('?dl=1')) return trimmed.replace('?dl=1', '?raw=1');
+      return trimmed.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
+    }
+
+    // GitHub
+    if (trimmed.includes('github.com') && trimmed.includes('/blob/')) {
+      return trimmed.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+    }
+
+    return trimmed;
   }
 
   // Helper: Fetch live records from Airtable if credentials are set
@@ -1456,8 +1506,9 @@ Provide warm, elegant, clear, and direct customer assistance. Keep responses con
   let lastAirtableAuthCheckTime = 0;
 
   async function fetchLiveAirtableProducts() {
-    const apiKey = process.env.AIRTABLE_API_KEY?.trim();
-    const baseId = process.env.AIRTABLE_BASE_ID?.trim();
+    const apiKey = process.env.AIRTABLE_PERSONAL_ACCESS_TOKEN?.trim() || process.env.AIRTABLE_API_KEY?.trim();
+    const baseId = process.env.AIRTABLE_BASE_ID?.trim() || 'appU8lAjcTDz63elZ';
+    const tableName = process.env.AIRTABLE_TABLE_NAME?.trim() || 'Products';
 
     if (!apiKey || !baseId) return null;
 
@@ -1475,7 +1526,7 @@ Provide warm, elegant, clear, and direct customer assistance. Keep responses con
       let offset: string | undefined = undefined;
 
       do {
-        const url = new URL(`https://api.airtable.com/v0/${baseId}/Products`);
+        const url = new URL(`https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}`);
         if (offset) url.searchParams.set('offset', offset);
 
         const resp = await fetch(url.toString(), {
@@ -1983,28 +2034,57 @@ Provide warm, elegant, clear, and direct customer assistance. Keep responses con
 
   app.get("/api/products", async (req, res) => {
     try {
+      // Direct query shortcut: /api/products?drive_url=...
+      const singleDriveUrl = (req.query.drive_url || req.query.attachment || req.query.url) as string;
+      if (singleDriveUrl) {
+        const freshUrl = convertGoogleDriveUrl(singleDriveUrl);
+        return res.json({
+          original_url: singleDriveUrl,
+          fresh_attachment_url: freshUrl,
+          candidates: [
+            freshUrl,
+            singleDriveUrl
+          ]
+        });
+      }
+
       const airtableProducts = await fetchLiveAirtableProducts();
       if (airtableProducts && airtableProducts.length > 0) {
         // Map Airtable records directly to storefront Products
         const storefrontProds = airtableProducts
           .filter(p => p.Visibility !== false && p.Status !== 'Draft' && p.Status !== 'Archived')
-          .map(p => ({
-            id: p.id,
-            name: p['Product Name'] || p.name,
-            description: p.Description || p.description || '',
-            short_description: p['Short Description'] || '',
-            price: p.Price || p.price || 350,
-            category: Array.isArray(p.Category) ? (p.Category[0] || 'ARTIFACTS') : (p.Category || 'ARTIFACTS'),
-            images: p.Images && p.Images.length > 0 ? p.Images : [{ url: '/uploads/hero_banner.jpg', type: 'image' }],
-            in_stock: (p['On-Hand Quantity'] ?? 10) > 0,
-            stock_quantity: p['On-Hand Quantity'] ?? 10,
-            sku: p.SKU || p.id,
-            tags: p.Tags || [],
-            is_visible: p.Visibility ?? true,
-            featured: p.Featured ?? false,
-            created_at: p['Last Updated Date'] || new Date().toISOString()
-          }));
+          .map(p => {
+            const rawImgs = p.Images && p.Images.length > 0 ? p.Images : [{ url: '/uploads/hero_banner.jpg', type: 'image' }];
+            const freshImgs = rawImgs.map((img: any, idx: number) => ({
+              uid: img.uid || `att_${idx}`,
+              url: convertGoogleDriveUrl(typeof img === 'string' ? img : img.url),
+              type: (typeof img === 'object' && img.type) ? img.type : 'image',
+              created_at: (typeof img === 'object' && img.created_at) ? img.created_at : new Date(Date.now() + idx * 1000).toISOString()
+            }));
 
+            // Sort attachments chronologically
+            freshImgs.sort((a: any, b: any) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+
+            return {
+              id: p.id,
+              name: p['Product Name'] || p.name,
+              description: p.Description || p.description || '',
+              short_description: p['Short Description'] || '',
+              price: p.Price || p.price || 350,
+              category: Array.isArray(p.Category) ? (p.Category[0] || 'ARTIFACTS') : (p.Category || 'ARTIFACTS'),
+              images: freshImgs,
+              in_stock: (p['On-Hand Quantity'] ?? 10) > 0,
+              stock_quantity: p['On-Hand Quantity'] ?? 10,
+              sku: p.SKU || p.id,
+              tags: p.Tags || [],
+              is_visible: p.Visibility ?? true,
+              featured: p.Featured ?? false,
+              created_at: p['Last Updated Date'] || new Date().toISOString()
+            };
+          });
+
+        // Chronological sort
+        storefrontProds.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         return res.json(storefrontProds);
       }
 
@@ -2053,12 +2133,20 @@ Provide warm, elegant, clear, and direct customer assistance. Keep responses con
               const targetNewName = getMappedNewName(p.name);
               const localMatch = localProducts.find(lp => lp.name.toLowerCase() === targetNewName.toLowerCase());
               if (localMatch) {
+                const freshImgs = (localMatch.images || []).map((img: any, idx: number) => ({
+                  ...img,
+                  url: convertGoogleDriveUrl(img.url),
+                  created_at: img.created_at || new Date(Date.now() + idx * 1000).toISOString()
+                }));
+                freshImgs.sort((a: any, b: any) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+
                 return {
                   ...localMatch,
                   ...p,
                   name: localMatch.name, // Force mapped name "D3 XX"
                   price: 350, // Force price to $350 as requested
-                  images: localMatch.images || []
+                  images: freshImgs,
+                  created_at: p.created_at || new Date().toISOString()
                 };
               }
               return null;
@@ -2066,6 +2154,7 @@ Provide warm, elegant, clear, and direct customer assistance. Keep responses con
             .filter((p): p is any => p !== null && fileNames.includes(p.name.toLowerCase()));
 
           if (filtered.length > 0) {
+            filtered.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
             return res.json(filtered);
           }
         } catch {
@@ -2073,9 +2162,88 @@ Provide warm, elegant, clear, and direct customer assistance. Keep responses con
         }
       }
 
-      return res.json(localProducts.map(p => ({ ...p, price: 350 })));
+      const formattedLocal = localProducts.map((p, pIdx) => {
+        const freshImgs = (p.images || []).map((img: any, idx: number) => ({
+          ...img,
+          url: convertGoogleDriveUrl(img.url),
+          created_at: img.created_at || new Date(Date.now() + idx * 1000).toISOString()
+        }));
+        freshImgs.sort((a: any, b: any) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+
+        return {
+          ...p,
+          price: 350,
+          images: freshImgs,
+          created_at: (p as any).created_at || new Date(Date.now() - pIdx * 60000).toISOString()
+        };
+      });
+
+      formattedLocal.sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+      return res.json(formattedLocal);
     } catch (error: any) {
       return res.json(localProducts.map(p => ({ ...p, price: 350 })));
+    }
+  });
+
+  // Keyless & Serverless attachment receiver
+  app.post("/api/products", async (req, res) => {
+    try {
+      const body = req.body || {};
+      const rawAttachments = body.attachments || body.images || body.drive_urls || body.url || [];
+      const attachmentList = Array.isArray(rawAttachments) ? rawAttachments : [rawAttachments];
+
+      const now = new Date().toISOString();
+      const freshAttachments = attachmentList
+        .filter(Boolean)
+        .map((item: any, idx: number) => {
+          const rawUrl = typeof item === 'string' ? item : (item.url || item.drive_url || item.src || '');
+          const freshUrl = convertGoogleDriveUrl(rawUrl);
+          const isVideo = rawUrl.toLowerCase().match(/\.(mp4|webm|ogg|mov)$/) || rawUrl.includes('video');
+          const isModel = rawUrl.toLowerCase().match(/\.(glb|gltf|usdz)$/) || rawUrl.includes('model');
+
+          return {
+            uid: `att_${Date.now()}_${idx}`,
+            url: freshUrl,
+            raw_source: rawUrl,
+            type: isVideo ? 'video' : (isModel ? 'model3d' : 'image'),
+            created_at: item.created_at || new Date(Date.now() + idx * 1000).toISOString(),
+            order: idx
+          };
+        })
+        .filter((att: any) => Boolean(att.url));
+
+      // Sort attachments in chronological order
+      freshAttachments.sort((a: any, b: any) => {
+        const timeA = new Date(a.created_at || 0).getTime();
+        const timeB = new Date(b.created_at || 0).getTime();
+        return timeA - timeB;
+      });
+
+      const newProduct = {
+        id: body.id || `prod_${Date.now()}`,
+        name: body.name || body['Product Name'] || "D3 ARTIFACT",
+        description: body.description || body.Description || "Technical garment artifact embedded with fresh Google Drive attachments.",
+        price: Number(body.price || body.Price || 350),
+        category: body.category || "ARTIFACT",
+        images: freshAttachments.length > 0 ? freshAttachments : [{ url: "/assets/images/IMG_4800_1_3.png", type: "image", created_at: now }],
+        stock: Number(body.stock || 50),
+        is_visible: body.is_visible !== undefined ? Boolean(body.is_visible) : true,
+        created_at: body.created_at || now,
+        updated_at: now
+      };
+
+      return res.status(201).json({
+        success: true,
+        message: "Google Drive image attachments parsed and converted keylessly",
+        product: newProduct,
+        attachments: freshAttachments
+      });
+    } catch (err: any) {
+      return res.status(400).json({
+        success: false,
+        error: "Failed to parse attachment payload",
+        details: err.message
+      });
     }
   });
 

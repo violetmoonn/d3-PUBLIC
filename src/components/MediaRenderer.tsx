@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ProductAsset } from '../types';
 import { EyeOff, Loader2, Image as ImageIcon } from 'lucide-react';
-import { convertGoogleDriveUrl } from '../utils/helpers';
+import { convertMediaUrl, getMediaCandidates } from '../utils/helpers';
 
 declare global {
   namespace JSX {
@@ -21,7 +21,6 @@ interface MediaRendererProps {
 }
 
 const DEFAULT_FALLBACK = '/assets/images/IMG_4800_1_3.png';
-const SECONDARY_FALLBACK = '/assets/images/black_hoodie_tracksuit.jpg';
 
 export const MediaRenderer: React.FC<MediaRendererProps> = ({ 
   asset, 
@@ -36,12 +35,7 @@ export const MediaRenderer: React.FC<MediaRendererProps> = ({
   const [loading, setLoading] = useState(true);
   
   const rawUrl = typeof asset === 'string' ? asset : asset?.url;
-  
-  // Format local path or drive URL
-  let formattedUrl = rawUrl ? convertGoogleDriveUrl(rawUrl) : '';
-  if (formattedUrl && !formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://') && !formattedUrl.startsWith('/')) {
-    formattedUrl = '/' + formattedUrl;
-  }
+  const formattedUrl = rawUrl ? convertMediaUrl(rawUrl) : '';
 
   const typeFromAsset = typeof asset === 'string' ? undefined : asset?.type;
   
@@ -55,44 +49,14 @@ export const MediaRenderer: React.FC<MediaRendererProps> = ({
     if (isVideoUrl) type = 'video';
   }
 
-  // Generate fallback candidates list
-  const getCandidateUrls = (initialUrl: string): string[] => {
-    if (!initialUrl) return [fallbackUrl || DEFAULT_FALLBACK, DEFAULT_FALLBACK, SECONDARY_FALLBACK];
-    if (initialUrl.startsWith('http://') || initialUrl.startsWith('https://')) {
-      return [initialUrl, fallbackUrl || DEFAULT_FALLBACK, DEFAULT_FALLBACK, SECONDARY_FALLBACK];
-    }
-
-    const filename = initialUrl.split('/').pop() || '';
-    const cleanFilename = decodeURIComponent(filename);
-    const sanitizedFilename = cleanFilename.replace(/ /g, '_').replace(/:/g, '_');
-
-    const list = [
-      initialUrl,
-      `/assets/images/${filename}`,
-      `/assets/images/${sanitizedFilename}`,
-      `/assets/images/${cleanFilename}`,
-      `/uploads/${filename}`,
-      `/uploads/${sanitizedFilename}`,
-      `/uploads/${cleanFilename}`,
-      `/${filename}`,
-      `/${sanitizedFilename}`,
-      `/${cleanFilename}`,
-      fallbackUrl,
-      DEFAULT_FALLBACK,
-      SECONDARY_FALLBACK
-    ].filter((u): u is string => Boolean(u));
-
-    return Array.from(new Set(list));
-  };
-
-  const [candidates, setCandidates] = useState<string[]>(() => getCandidateUrls(formattedUrl));
+  const [candidates, setCandidates] = useState<string[]>(() => getMediaCandidates(formattedUrl, fallbackUrl));
 
   // Reset states when URL changes
   useEffect(() => {
     setError(false);
     setAttemptIndex(0);
     setLoading(true);
-    setCandidates(getCandidateUrls(formattedUrl));
+    setCandidates(getMediaCandidates(formattedUrl, fallbackUrl));
 
     if (type === 'model3d') {
       import('@google/model-viewer').catch(() => {
@@ -101,7 +65,7 @@ export const MediaRenderer: React.FC<MediaRendererProps> = ({
     }
   }, [formattedUrl, fallbackUrl, type]);
 
-  const currentSrc = candidates[attemptIndex] || DEFAULT_FALLBACK;
+  const currentSrc = candidates[attemptIndex] || fallbackUrl || DEFAULT_FALLBACK;
 
   const handleError = () => {
     if (attemptIndex + 1 < candidates.length) {

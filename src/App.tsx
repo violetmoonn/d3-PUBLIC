@@ -704,14 +704,28 @@ export default function App() {
         if (resp.ok) {
           const apiProducts = await resp.json();
           if (Array.isArray(apiProducts) && apiProducts.length > 0) {
-            setProducts(apiProducts.map(p => ({
-              ...p,
-              images: (p.images || []).map((img: any) => ({
+            const formatted = apiProducts.map(p => {
+              const formattedImages = (p.images || []).map((img: any, idx: number) => ({
                 ...img,
+                url: convertGoogleDriveUrl(img.url),
                 uid: img.uid || generateUid(),
-                type: (img.type === 'video' || img.type === 'model3d') ? img.type : 'image'
-              }))
-            })));
+                type: (img.type === 'video' || img.type === 'model3d') ? img.type : 'image',
+                created_at: img.created_at || new Date(Date.now() + idx * 1000).toISOString()
+              }));
+
+              // Chronological ordering of attachments within product
+              formattedImages.sort((a: any, b: any) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+
+              return {
+                ...p,
+                images: formattedImages,
+                created_at: p.created_at || new Date().toISOString()
+              };
+            });
+
+            // Sort products chronologically (newest first)
+            formatted.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+            setProducts(formatted);
             return true;
           }
         }
@@ -1190,14 +1204,15 @@ export default function App() {
       const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)$/) || url.includes('video') || url.includes('/view');
       const existingImages = Array.isArray(product.images) ? product.images : [];
       
-      const newImages = [
-        {
-          url: convertedUrl,
-          type: (isVideo ? 'video' : 'image') as any,
-          uid: generateUid()
-        },
-        ...existingImages
-      ];
+      const newAttachment = {
+        url: convertedUrl,
+        type: (isVideo ? 'video' : 'image') as any,
+        uid: generateUid(),
+        created_at: new Date().toISOString()
+      };
+
+      const newImages = [...existingImages, newAttachment];
+      newImages.sort((a: any, b: any) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
 
       await callAdminApi('POST', '/api/admin/db/products', { 
         id: productId, 
