@@ -700,7 +700,9 @@ export default function App() {
 
     const loadAirtableProducts = async () => {
       try {
-        const resp = await fetch('/api/products');
+        // Airtable attachment URLs are temporary signed URLs, so always ask the
+        // server for a fresh catalog instead of reusing an old browser response.
+        const resp = await fetch('/api/products', { cache: 'no-store' });
         if (resp.ok) {
           const apiProducts = await resp.json();
           if (Array.isArray(apiProducts) && apiProducts.length > 0) {
