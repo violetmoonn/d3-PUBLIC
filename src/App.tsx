@@ -155,19 +155,6 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
   }
 
   static getDerivedStateFromError(error: any) {
-    const msg = error?.message || String(error || '');
-    if (
-      msg.includes('Script error') ||
-      msg === 'Script error.' ||
-      msg.includes('ResizeObserver') ||
-      msg.includes('IDBDatabase') ||
-      msg.includes('database connection is closing') ||
-      msg.includes('Database closing') ||
-      msg.includes('transaction')
-    ) {
-      console.warn('[ErrorBoundary] Suppressed transient script/IndexedDB error:', msg);
-      return { hasError: false, error: null };
-    }
     return { hasError: true, error };
   }
 
@@ -177,6 +164,20 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
 
   render() {
     if (this.state.hasError) {
+      const msg = this.state.error?.message || String(this.state.error || '');
+      if (
+        msg.includes('Script error') ||
+        msg === 'Script error.' ||
+        msg.includes('ResizeObserver') ||
+        msg.includes('payload') ||
+        msg.includes('IDBDatabase') ||
+        msg.includes('database connection is closing') ||
+        msg.includes('Database closing') ||
+        msg.includes('transaction')
+      ) {
+        return this.props.children;
+      }
+
       return (
         <div className="min-h-screen bg-paper flex items-center justify-center p-8 text-center text-ink">
           <div className="max-w-md space-y-6">

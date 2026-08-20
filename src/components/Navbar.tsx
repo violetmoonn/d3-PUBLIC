@@ -210,12 +210,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                 setIsSearchOpen(!isSearchOpen);
                 if (isMobileMenuOpen) setIsMobileMenuOpen(false);
               }}
-              className="hover:opacity-50 transition-opacity focus:outline-none flex items-center gap-1.5 cursor-pointer text-black text-[12px] sm:text-[11px]"
+              className="hover:opacity-50 transition-opacity focus:outline-none flex items-center gap-1.5 cursor-pointer text-black text-[12px] sm:text-[11px] font-normal leading-none"
               aria-label={t('search') || 'Search'}
               title={t('search') || 'Search'}
             >
               <Search className="w-4 h-4 sm:hidden stroke-[1.5]" />
-              <span className="hidden sm:inline">Search</span>
+              <span className="hidden sm:inline lowercase">search</span>
             </button>
           </div>
 
@@ -252,13 +252,13 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => {
                 setIsReceiptOpen(prev => !prev);
               }}
-              className="hover:opacity-60 transition-opacity focus:outline-none flex items-center relative cursor-pointer text-black font-sans text-[11px] sm:text-[12px] font-medium tracking-wider uppercase leading-none"
+              className="hover:opacity-50 transition-opacity focus:outline-none flex items-center relative cursor-pointer text-black font-sans text-[12px] sm:text-[11px] font-normal lowercase tracking-normal leading-none"
               title={t('checkout_bag') || 'Shopping Cart'}
               aria-label={t('checkout_bag') || 'Shopping Cart'}
               id="shopping-bag-btn"
             >
               <span>
-                Cart{cartCount > 0 ? ` (${cartCount})` : ''}
+                cart{cartCount > 0 ? ` (${cartCount})` : ''}
               </span>
             </button>
 
@@ -377,9 +377,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                   {/* Navigation List Items */}
                   <div className="space-y-1">
-                    {primaryLinks.map((link, idx) => {
+                    {primaryLinks.map((link) => {
                       const isActive = currentView === link.id;
-                      const formattedIdx = String(idx + 1).padStart(2, '0');
                       return (
                         <a 
                           key={link.id}
@@ -400,9 +399,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                           }`}
                         >
                           <div className="flex items-center gap-2">
-                            <span className={`text-[9.5px] font-mono ${isActive ? 'text-white/60' : 'text-black/40'}`}>
-                              [{formattedIdx}]
-                            </span>
                             <span className="uppercase tracking-wide font-medium">
                               {link.label}
                             </span>
@@ -433,9 +429,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                           }`}
                         >
                           <div className="flex items-center gap-2">
-                            <span className="text-[9.5px] font-mono text-black/40">
-                              [04]
-                            </span>
                             <span className="uppercase tracking-wide font-medium">
                               CORPORATE
                             </span>
@@ -462,7 +455,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                               transition={{ duration: 0.15 }}
                               className="pl-3 py-1 space-y-0.5 border-l border-dashed border-black/20 ml-4 my-1 overflow-hidden"
                             >
-                              {corporateLinks.map((subLink, subIdx) => {
+                              {corporateLinks.map((subLink) => {
                                 const isSubActive = currentView === subLink.id;
                                 return (
                                   <a
@@ -479,7 +472,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                         : 'text-black/60 hover:text-black hover:bg-black/5'
                                     }`}
                                   >
-                                    <span>04.{subIdx + 1} // {subLink.label}</span>
+                                    <span>{subLink.label}</span>
                                     {isSubActive && <span className="text-[7.5px] bg-black text-white px-1 py-0.2">ACTIVE</span>}
                                   </a>
                                 );
@@ -502,9 +495,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                           }`}
                         >
                           <div className="flex items-center gap-2">
-                            <span className="text-[9.5px] font-mono text-black/40">
-                              [05]
-                            </span>
                             <span className="uppercase tracking-wide font-medium">
                               LEGAL
                             </span>
@@ -531,7 +521,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                               transition={{ duration: 0.15 }}
                               className="pl-3 py-1 space-y-0.5 border-l border-dashed border-black/20 ml-4 my-1 overflow-hidden"
                             >
-                              {legalLinks.map((subLink, subIdx) => {
+                              {legalLinks.map((subLink) => {
                                 const isSubActive = currentView === subLink.id;
                                 return (
                                   <a
@@ -548,7 +538,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                         : 'text-black/60 hover:text-black hover:bg-black/5'
                                     }`}
                                   >
-                                    <span>05.{subIdx + 1} // {subLink.label}</span>
+                                    <span>{subLink.label}</span>
                                     {isSubActive && <span className="text-[7.5px] bg-black text-white px-1 py-0.2">ACTIVE</span>}
                                   </a>
                                 );

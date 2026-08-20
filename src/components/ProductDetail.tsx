@@ -389,9 +389,11 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                         </span>
                       </div>
 
-                      <p className="mt-5 text-[11px] font-sans leading-relaxed text-ink/70 uppercase max-w-lg border-t border-ink/10 pt-4">
-                        {product.description || "Crafted from 100% organic cotton with a brushed fleece interior. Features a relaxed fit and reinforced ribbing at the cuffs and hems. Made to order in Portugal. Please allow 2 weeks till delivery. The Graphics may be slightly different from the photo."}
-                      </p>
+                      <div className="mt-5 text-[11px] font-sans leading-relaxed text-ink/80 uppercase max-w-lg border-t border-ink/10 pt-4 space-y-2">
+                        <p className="whitespace-pre-line">
+                          {product.description || 'Crafted from 100% organic cotton with a brushed fleece interior. Features a relaxed fit and reinforced ribbing at the cuffs and hems. Made to order in Portugal. Please allow 2 weeks till delivery.'}
+                        </p>
+                      </div>
                     </div>
                   </div>
 
