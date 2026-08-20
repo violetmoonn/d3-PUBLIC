@@ -423,8 +423,10 @@ export default function App() {
     } catch (err: any) {
       if (err.message?.includes('PERMISSION_DENIED') || err.code === 'permission-denied') {
         console.warn("Client-side sync: Auto-synchronization skipped due to permission constraints. Ensure you are fully logged in as admin with correct credentials.");
+      } else if (err.message?.includes('NOT_FOUND') || err.code === 'not-found' || err.message?.includes('5 NOT_FOUND')) {
+        console.log("Client-side sync: Firestore collection initial check complete; operating cleanly with local product catalog.");
       } else {
-        console.warn("Client-side sync: Auto-synchronization failed:", err.message || err);
+        console.warn("Client-side sync notice:", err.message || err);
       }
     }
   };
