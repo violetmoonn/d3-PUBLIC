@@ -155,6 +155,19 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
   }
 
   static getDerivedStateFromError(error: any) {
+    const msg = error?.message || String(error || '');
+    if (
+      msg.includes('Script error') ||
+      msg === 'Script error.' ||
+      msg.includes('ResizeObserver') ||
+      msg.includes('IDBDatabase') ||
+      msg.includes('database connection is closing') ||
+      msg.includes('Database closing') ||
+      msg.includes('transaction')
+    ) {
+      console.warn('[ErrorBoundary] Suppressed transient script/IndexedDB error:', msg);
+      return { hasError: false, error: null };
+    }
     return { hasError: true, error };
   }
 
@@ -164,20 +177,6 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
 
   render() {
     if (this.state.hasError) {
-      const msg = this.state.error?.message || String(this.state.error || '');
-      if (
-        msg.includes('Script error') ||
-        msg === 'Script error.' ||
-        msg.includes('ResizeObserver') ||
-        msg.includes('payload') ||
-        msg.includes('IDBDatabase') ||
-        msg.includes('database connection is closing') ||
-        msg.includes('Database closing') ||
-        msg.includes('transaction')
-      ) {
-        return this.props.children;
-      }
-
       return (
         <div className="min-h-screen bg-paper flex items-center justify-center p-8 text-center text-ink">
           <div className="max-w-md space-y-6">
@@ -423,10 +422,8 @@ export default function App() {
     } catch (err: any) {
       if (err.message?.includes('PERMISSION_DENIED') || err.code === 'permission-denied') {
         console.warn("Client-side sync: Auto-synchronization skipped due to permission constraints. Ensure you are fully logged in as admin with correct credentials.");
-      } else if (err.message?.includes('NOT_FOUND') || err.code === 'not-found' || err.message?.includes('5 NOT_FOUND')) {
-        console.log("Client-side sync: Firestore collection initial check complete; operating cleanly with local product catalog.");
       } else {
-        console.warn("Client-side sync notice:", err.message || err);
+        console.warn("Client-side sync: Auto-synchronization failed:", err.message || err);
       }
     }
   };
@@ -708,9 +705,7 @@ export default function App() {
 
     const loadAirtableProducts = async () => {
       try {
-        // Airtable attachment URLs are temporary signed URLs, so always ask the
-        // server for a fresh catalog instead of reusing an old browser response.
-        const resp = await fetch('/api/products', { cache: 'no-store' });
+        const resp = await fetch('/api/products');
         if (resp.ok) {
           const apiProducts = await resp.json();
           if (Array.isArray(apiProducts) && apiProducts.length > 0) {

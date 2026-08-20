@@ -1,8 +1,12 @@
 /**
- * Combined /api/products handler
- * - If AIRTABLE_API_KEY and AIRTABLE_BASE_ID are configured the route will proxy Airtable and map records.
- * - Otherwise falls back to a keyless, in-memory catalogue with Google Drive / Dropbox / GitHub raw conversion.
- * - POST still accepts keyless attachment posts and stores them in-memory.
+ * Serverless & Keyless API Route: /api/products
+ * Compatible with Vercel Serverless Functions & Express proxy.
+ *
+ * Features:
+ * - Keyless Google Drive Attachment Parsing: Converts any public Google Drive sharing URL,
+ *   direct file ID, /open?id=, /file/d/, or /uc?id= to fresh, high-resolution direct attachment URLs.
+ * - Chronological Ordering: Sorts and embeds product attachments in chronological order.
+ * - Zero API key requirements: Fully functional for public assets without private credentials.
  */
 
 // Helper to extract Google Drive File ID keylessly
@@ -10,30 +14,42 @@ function extractGoogleDriveFileId(url: string): string | null {
   if (!url || typeof url !== 'string') return null;
   const trimmed = url.trim();
 
+  // Pattern 1: /file/d/<id>
   const fileDMatch = trimmed.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
   if (fileDMatch && fileDMatch[1]) return fileDMatch[1].split('?')[0];
 
+  // Pattern 2: id=<id>
   const idMatch = trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/);
   if (idMatch && idMatch[1]) return idMatch[1].split('&')[0];
 
+  // Pattern 3: /open?id=<id>
   const openMatch = trimmed.match(/\/open\?id=([a-zA-Z0-9_-]+)/);
   if (openMatch && openMatch[1]) return openMatch[1].split('&')[0];
 
+  // Pattern 4: /uc?id=<id>
   const ucMatch = trimmed.match(/\/uc\?(?:[^&]*&)*id=([a-zA-Z0-9_-]+)/);
   if (ucMatch && ucMatch[1]) return ucMatch[1].split('&')[0];
 
-  if (/^[a-zA-Z0-9_-]{25,45}$/.test(trimmed)) return trimmed;
+  // Pattern 5: Direct Google Drive File ID (alphanumeric 25-45 chars)
+  if (/^[a-zA-Z0-9_-]{25,45}$/.test(trimmed)) {
+    return trimmed;
+  }
 
   return null;
 }
 
+// Convert any Google Drive, Dropbox, or remote attachment link to fresh direct URL
 export function convertAttachmentUrl(url: string): string {
   if (!url || typeof url !== 'string') return '';
   const trimmed = url.trim();
 
   const driveId = extractGoogleDriveFileId(trimmed);
-  if (driveId) return `https://drive.google.com/thumbnail?id=${driveId}&sz=w2000`;
+  if (driveId) {
+    // High-resolution public thumbnail endpoint that bypasses Google login/session requirements
+    return `https://drive.google.com/thumbnail?id=${driveId}&sz=w2000`;
+  }
 
+  // Dropbox direct link
   if (trimmed.includes('dropbox.com')) {
     if (trimmed.includes('dl.dropboxusercontent.com')) return trimmed;
     if (trimmed.includes('?dl=0')) return trimmed.replace('?dl=0', '?raw=1');
@@ -41,10 +57,12 @@ export function convertAttachmentUrl(url: string): string {
     return trimmed.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
   }
 
+  // GitHub raw link
   if (trimmed.includes('github.com') && trimmed.includes('/blob/')) {
     return trimmed.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
   }
 
+  // Local assets: ensure leading slash
   if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://') && !trimmed.startsWith('data:') && !trimmed.startsWith('blob:')) {
     return trimmed.startsWith('/') ? trimmed : '/' + trimmed.replace(/^\.\//, '');
   }
@@ -52,72 +70,7 @@ export function convertAttachmentUrl(url: string): string {
   return trimmed;
 }
 
-// Airtable utilities (used when configured)
-const firstPresent = (fields: Record<string, any>, names: string[]) => {
-  for (const name of names) {
-    const value = fields[name];
-    if (value !== undefined && value !== null && value !== '') return value;
-  }
-  return undefined;
-};
-
-const normalizeImages = (fields: Record<string, any>) => {
-  const raw = firstPresent(fields, [
-    'Images', 'Image', 'Photos', 'Photo', 'Media', 'Picture', 'Pictures',
-    'Cover', 'Cover Image', 'Attachment', 'Attachments', 'Image URL', 'URL'
-  ]);
-
-  const items = Array.isArray(raw) ? raw : raw ? [raw] : [];
-
-  return items.flatMap((item: any) => {
-    if (typeof item === 'string') {
-      return item.trim() ? [{ url: item.trim(), type: 'image' }] : [];
-    }
-
-    const url = item?.url
-      || item?.thumbnails?.full?.url
-      || item?.thumbnails?.large?.url
-      || item?.thumbnails?.small?.url;
-
-    if (!url) return [];
-
-    return [{
-      url,
-      type: typeof item.type === 'string' && item.type.startsWith('video') ? 'video' : 'image'
-    }];
-  });
-};
-
-const mapProduct = (record: any) => {
-  const fields = record.fields || {};
-  const name = firstPresent(fields, ['Product Name', 'Name', 'Title']) || 'Product';
-  const quantity = Number(firstPresent(fields, ['On-Hand Quantity', 'Quantity']) ?? 50);
-  const category = firstPresent(fields, ['Category', 'Categories', 'Category Name']) || 'ARTIFACTS';
-  const images = normalizeImages(fields).map((img: any) => ({ ...img, url: convertAttachmentUrl(img.url) }));
-
-  return {
-    id: record.id,
-    name,
-    description: firstPresent(fields, [
-      'Description', 'Product Description', 'Details', 'Long Description',
-      'Body', 'Notes', 'Overview', 'Short Description'
-    ]) || '',
-    short_description: firstPresent(fields, ['Short Description', 'Subtitle', 'Summary']) || '',
-    price: Number(fields.Price) || 350,
-    category: Array.isArray(category) ? category[0] : category,
-    images,
-    in_stock: quantity > 0,
-    stock_quantity: quantity,
-    sku: firstPresent(fields, ['SKU', 'Code']) || record.id,
-    tags: Array.isArray(fields.Tags) ? fields.Tags : fields.Tags ? [fields.Tags] : [],
-    is_visible: fields.Visibility !== false,
-    featured: Boolean(fields.Featured),
-    status: fields.Status || 'Active',
-    created_at: fields['Last Updated Date'] || new Date().toISOString()
-  };
-};
-
-// Fallback base products and in-memory posted products (from incoming branch)
+// Base product catalogue fallback with chronological timestamps
 const BASE_PRODUCTS = [
   {
     id: "d3-01",
@@ -140,10 +93,11 @@ const BASE_PRODUCTS = [
   }
 ];
 
+// In-memory store for newly posted attachment products during runtime
 let postedProducts: any[] = [];
 
 export default async function handler(req: any, res: any) {
-  // Allow keyless queries (incoming branch behaviour)
+  // Enable CORS for keyless API access
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -152,9 +106,11 @@ export default async function handler(req: any, res: any) {
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
   );
 
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
 
-  // POST: keep keyless attachment posting behaviour (in-memory)
+  // POST: Receive Google Drive attachments keylessly and return fresh embeddable cards
   if (req.method === 'POST') {
     try {
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
@@ -181,7 +137,12 @@ export default async function handler(req: any, res: any) {
         })
         .filter((att: any) => Boolean(att.url));
 
-      freshAttachments.sort((a: any, b: any) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+      // Sort attachments in chronological order
+      freshAttachments.sort((a: any, b: any) => {
+        const timeA = new Date(a.created_at || 0).getTime();
+        const timeB = new Date(b.created_at || 0).getTime();
+        return timeA - timeB;
+      });
 
       const newProduct = {
         id: body.id || `prod_${Date.now()}`,
@@ -198,87 +159,92 @@ export default async function handler(req: any, res: any) {
 
       postedProducts.unshift(newProduct);
 
-      return res.status(201).json({ success: true, message: "Attachments parsed (keyless)", product: newProduct, attachments: freshAttachments });
+      return res.status(201).json({
+        success: true,
+        message: "Google Drive image attachments parsed and converted keylessly",
+        product: newProduct,
+        attachments: freshAttachments
+      });
     } catch (err: any) {
-      return res.status(400).json({ success: false, error: "Failed to parse attachment payload", details: err.message });
+      return res.status(400).json({
+        success: false,
+        error: "Failed to parse attachment payload",
+        details: err.message
+      });
     }
   }
 
-  // GET: If Airtable is configured use it; otherwise return keyless in-memory catalogue
+  // GET: Fetch all products with fresh Google Drive attachment URLs in chronological order
   if (req.method === 'GET') {
-    const apiKey = process.env.AIRTABLE_API_KEY?.trim();
-    const baseId = process.env.AIRTABLE_BASE_ID?.trim();
-    const tableName = process.env.AIRTABLE_PRODUCTS_TABLE?.trim() || process.env.AIRTABLE_TABLE_NAME?.trim() || 'Products';
-
-    if (apiKey && baseId) {
-      try {
-        const records: any[] = [];
-        let offset: string | undefined;
-
-        do {
-          const url = new URL(`https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}`);
-          if (offset) url.searchParams.set('offset', offset);
-
-          const response = await fetch(url.toString(), { headers: { Authorization: `Bearer ${apiKey}` } });
-
-          if (!response.ok) {
-            const detail = await response.text();
-            console.error(`Airtable returned ${response.status}: ${detail}`);
-            return res.status(502).json({ error: `Airtable request failed with status ${response.status}.` });
-          }
-
-          const page = await response.json() as { records?: any[]; offset?: string };
-          records.push(...(page.records || []));
-          offset = page.offset;
-        } while (offset);
-
-        res.setHeader('Cache-Control', 'private, no-store, max-age=0');
-
-        const products = records.map(mapProduct).filter((product: any) => product.is_visible && product.status !== 'Draft' && product.status !== 'Archived');
-        return res.status(200).json(products);
-      } catch (error) {
-        console.error('Failed to load Airtable products:', error);
-        return res.status(500).json({ error: 'Unable to load products from Airtable.' });
-      }
-    }
-
-    // Keyless fallback (incoming branch behaviour)
     try {
+      // Direct link conversion query shortcut: /api/products?drive_url=https://drive.google.com/...
       const singleDriveUrl = (req.query?.drive_url || req.query?.attachment || req.query?.url) as string;
       if (singleDriveUrl) {
         const freshUrl = convertAttachmentUrl(singleDriveUrl);
-        return res.json({ original_url: singleDriveUrl, fresh_attachment_url: freshUrl, candidates: [freshUrl, `https://lh3.googleusercontent.com/d/${extractGoogleDriveFileId(singleDriveUrl) || ''}=s2000`, singleDriveUrl].filter(Boolean) });
+        return res.json({
+          original_url: singleDriveUrl,
+          fresh_attachment_url: freshUrl,
+          candidates: [
+            freshUrl,
+            `https://lh3.googleusercontent.com/d/${extractGoogleDriveFileId(singleDriveUrl) || ''}=s2000`,
+            singleDriveUrl
+          ].filter(Boolean)
+        });
       }
 
+      // Combine base and posted products
       const all = [...postedProducts, ...BASE_PRODUCTS];
 
+      // Format all images with fresh converted URLs and ensure chronological ordering
       const formatted = all.map(p => {
         const rawImages = Array.isArray(p.images) ? p.images : [];
         const freshImages = rawImages.map((img: any, idx: number) => {
           const rawUrl = typeof img === 'string' ? img : (img.url || '');
           const freshUrl = convertAttachmentUrl(rawUrl);
-          return { uid: img.uid || `img_${idx}`, url: freshUrl, type: img.type || 'image', created_at: img.created_at || new Date(Date.now() + idx * 1000).toISOString() };
+          return {
+            uid: img.uid || `img_${idx}`,
+            url: freshUrl,
+            type: img.type || 'image',
+            created_at: img.created_at || new Date(Date.now() + idx * 1000).toISOString()
+          };
         });
 
-        freshImages.sort((a: any, b: any) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+        // Ensure attachments inside each product card are chronologically ordered
+        freshImages.sort((a: any, b: any) => {
+          const timeA = new Date(a.created_at || 0).getTime();
+          const timeB = new Date(b.created_at || 0).getTime();
+          return timeA - timeB;
+        });
 
-        return { ...p, images: freshImages, created_at: p.created_at || new Date().toISOString() };
+        return {
+          ...p,
+          images: freshImages,
+          created_at: p.created_at || new Date().toISOString()
+        };
       });
 
+      // Sort products chronologically (newest first or chronological sequence)
       const sortOrder = req.query?.sort || 'chronological';
       formatted.sort((a, b) => {
         const timeA = new Date(a.created_at || 0).getTime();
         const timeB = new Date(b.created_at || 0).getTime();
-        if (sortOrder === 'asc' || sortOrder === 'oldest') return timeA - timeB;
+        if (sortOrder === 'asc' || sortOrder === 'oldest') {
+          return timeA - timeB;
+        }
+        // Default chronological (descending timestamp: newest releases first)
         return timeB - timeA;
       });
 
+      // Set caching headers for performance
       res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
       return res.status(200).json(formatted);
     } catch (err: any) {
-      return res.status(500).json({ error: 'Internal error fetching products', details: err.message });
+      return res.status(500).json({
+        error: "Internal error fetching products",
+        details: err.message
+      });
     }
   }
 
-  return res.status(405).json({ error: 'Method not allowed' });
+  return res.status(405).json({ error: "Method not allowed" });
 }

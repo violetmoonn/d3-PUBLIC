@@ -9,8 +9,7 @@
     <script>
       // Top-level error interceptor to handle cross-origin script errors and iframe boundary events safely
       window.onerror = function(message, source, lineno, colno, error) {
-        var msg = String(message || '');
-        if (!message || msg === 'Script error.' || msg.includes('Script error') || msg.includes('payload') || !source || (typeof source === 'string' && !source.includes(window.location.host))) {
+        if (!message || message === 'Script error.' || String(message).includes('Script error') || !source || (typeof source === 'string' && !source.includes(window.location.host))) {
           console.warn('[Notice] Intercepted cross-origin/external script error.');
           return true; // Suppresses default error propagation
         }
@@ -18,7 +17,7 @@
       };
       window.addEventListener('error', function(event) {
         var msg = event && (event.message || (event.error && event.error.message) || String(event.error || ''));
-        if (!msg || msg === 'Script error.' || msg.includes('Script error') || msg.includes('payload') || msg.includes('ResizeObserver') || !event.filename || (event.filename && !event.filename.includes(window.location.host))) {
+        if (!msg || msg === 'Script error.' || msg.includes('Script error') || msg.includes('ResizeObserver') || !event.filename || (event.filename && !event.filename.includes(window.location.host))) {
           if (event.preventDefault) event.preventDefault();
           if (event.stopImmediatePropagation) event.stopImmediatePropagation();
         }
@@ -26,7 +25,7 @@
       window.addEventListener('unhandledrejection', function(event) {
         var reason = event && event.reason;
         var msg = (reason && reason.message) || String(reason || '');
-        if (!msg || msg.includes('Script error') || msg.includes('payload') || msg.includes('IDBDatabase') || msg.includes('database connection is closing') || msg.includes('Database closing')) {
+        if (!msg || msg.includes('Script error') || msg.includes('IDBDatabase') || msg.includes('database connection is closing') || msg.includes('Database closing')) {
           if (event.preventDefault) event.preventDefault();
           if (event.stopImmediatePropagation) event.stopImmediatePropagation();
         }

@@ -1247,7 +1247,7 @@ Provide warm, elegant, clear, and direct customer assistance. Keep responses con
     {
       id: 'prod_01',
       'Product Name': 'D3 01 Heavyweight Hoodie',
-      Description: 'A high-fidelity heavyweight hoodie artifact crafted for the D3COMPOSURE void.',
+      Description: 'Crafted from 100% organic cotton with a brushed fleece interior. Features a relaxed fit and reinforced ribbing at the cuffs and hems. Made to order in Portugal. Please allow 2 weeks till delivery. The Graphics may be slightly different from the photo.',
       'Short Description': 'Experimental technical silhouette hoodie.',
       Price: 350,
       Cost: 120,
