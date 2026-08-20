@@ -16,9 +16,10 @@ export const products = [
     category: "ARTIFACT",
     is_visible: true,
     stripe_payment_link: "https://buy.stripe.com/00w4gB4II5Av2qQgsmfjG0a",
-    stripe_buy_button_id: "buy_btn_1TAei0Q4FdRda8h8gr1qQnw4",
+    stripe_buy_button_id: "",
     stripe_publishable_key: "pk_live_51T8ECtQ4FdRda8h8nfdJSUR7txP58VE5Gpt3eqzVkBY7yHIhagkM85zML8BMqfHkseITaVI72Dwm1RzOUJmYjPqQ00irFfM8FW",
     images: [
+      { url: "https://cdn.uploadtourl.com/106e0203-9397-4329-8883-29b0ff2ab237_Screenshot_2026-08-08_at_8.37.58_PM.png", type: "image" },
       { url: "/assets/images/IMG_4800_1_3.png", type: "image" },
       { url: "/assets/images/IMG_3215_3_3.png", type: "image" },
       { url: "/assets/images/black_hoodie_tracksuit.jpg", type: "image" },

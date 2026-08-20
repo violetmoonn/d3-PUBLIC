@@ -11,6 +11,7 @@ if (typeof window !== 'undefined') {
     if (
       msg.includes('Script error') ||
       msg === 'Script error.' ||
+      msg.includes('payload') ||
       msg.includes('IDBDatabase') ||
       msg.includes('database connection is closing') ||
       msg.includes('Database closing') ||
@@ -28,6 +29,7 @@ if (typeof window !== 'undefined') {
     if (
       msg === 'Script error.' ||
       msg.includes('Script error') ||
+      msg.includes('payload') ||
       msg.includes('ResizeObserver loop') ||
       msg.includes('IDBDatabase') ||
       msg.includes('database connection is closing') ||
