@@ -41,28 +41,129 @@ export const formatPrice = (usdAmount: number, targetCurrency?: string) => {
   return `${symbol}${converted.toFixed(2)} ${currency}`;
 };
 
-export const getDriveFileId = (url: string) => {
+export const getDriveFileId = (url: string): string | null => {
   if (!url) return null;
-  const driveRegex = /\/file\/d\/([^\/]+)/;
+  const driveRegex = /\/file\/d\/([a-zA-Z0-9_-]+)/;
   const match = url.match(driveRegex);
   if (match && match[1]) return match[1].split('?')[0];
-  const idMatch = url.match(/[?&]id=([^&]+)/);
-  return idMatch ? idMatch[1] : null;
+  const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (idMatch && idMatch[1]) return idMatch[1].split('&')[0];
+  const openMatch = url.match(/\/open\?id=([a-zA-Z0-9_-]+)/);
+  if (openMatch && openMatch[1]) return openMatch[1].split('&')[0];
+  const ucMatch = url.match(/\/uc\?(?:[^&]*&)*id=([a-zA-Z0-9_-]+)/);
+  if (ucMatch && ucMatch[1]) return ucMatch[1].split('&')[0];
+  return null;
 };
 
-export const convertGoogleDriveUrl = (url: string) => {
+/**
+ * Converts Google Drive sharing links to universal public thumbnail/direct links
+ * compatible with Vercel, static hosting, and public incognito viewers.
+ */
+export const convertGoogleDriveUrl = (url: string): string => {
   if (!url) return '';
-  const driveRegex = /\/file\/d\/([^\/]+)/;
-  const match = url.match(driveRegex);
-  if (match && match[1]) {
-    const fileId = match[1].split('?')[0].split('/')[0];
-    return `https://lh3.googleusercontent.com/u/0/d/${fileId}=w1000`;
+  const fileId = getDriveFileId(url);
+  if (fileId) {
+    // High-res universal thumbnail endpoint without Google session auth requirement
+    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w2000`;
   }
-  const idMatch = url.match(/[?&]id=([^&]+)/);
-  if (idMatch && idMatch[1]) {
-    return `https://lh3.googleusercontent.com/u/0/d/${idMatch[1]}=w1000`;
+  return convertMediaUrl(url);
+};
+
+/**
+ * Universal media URL converter that handles Google Drive, Dropbox, GitHub,
+ * OneDrive, Airtable attachments, and relative local asset paths for Vercel.
+ */
+export const convertMediaUrl = (url: string): string => {
+  if (!url) return '';
+  const trimmed = url.trim();
+
+  // Google Drive
+  const driveId = getDriveFileId(trimmed);
+  if (driveId) {
+    return `https://drive.google.com/thumbnail?id=${driveId}&sz=w2000`;
   }
-  return url;
+
+  // Dropbox
+  if (trimmed.includes('dropbox.com')) {
+    if (trimmed.includes('dl.dropboxusercontent.com')) return trimmed;
+    if (trimmed.includes('?dl=0')) return trimmed.replace('?dl=0', '?raw=1');
+    if (trimmed.includes('?dl=1')) return trimmed.replace('?dl=1', '?raw=1');
+    return trimmed.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
+  }
+
+  // GitHub raw blob
+  if (trimmed.includes('github.com') && trimmed.includes('/blob/')) {
+    return trimmed.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+  }
+
+  // OneDrive sharing link
+  if (trimmed.includes('1drv.ms') || trimmed.includes('onedrive.live.com')) {
+    if (trimmed.includes('download?')) return trimmed;
+    if (trimmed.includes('resid=')) return trimmed.replace('/view.aspx', '/download').replace('/redir', '/download');
+  }
+
+  // Local assets: ensure leading slash for Vercel root-relative routing
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://') && !trimmed.startsWith('data:') && !trimmed.startsWith('blob:')) {
+    const withoutLeading = trimmed.replace(/^\.?\//, '');
+    return '/' + withoutLeading;
+  }
+
+  return trimmed;
+};
+
+/**
+ * Returns an ordered array of candidate URLs to attempt when loading an image,
+ * ensuring high reliability when deployed on Vercel or custom domains.
+ */
+export const getMediaCandidates = (url: string, fallbackUrl?: string): string[] => {
+  const DEFAULT_IMAGE = '/assets/images/IMG_4800_1_3.png';
+  const SECONDARY_IMAGE = '/assets/images/black_hoodie_tracksuit.jpg';
+
+  if (!url) {
+    return [fallbackUrl || DEFAULT_IMAGE, DEFAULT_IMAGE, SECONDARY_IMAGE].filter(Boolean) as string[];
+  }
+
+  const trimmed = url.trim();
+  const candidates: string[] = [];
+
+  // 1. Google Drive candidates
+  const driveId = getDriveFileId(trimmed);
+  if (driveId) {
+    candidates.push(`https://drive.google.com/thumbnail?id=${driveId}&sz=w2000`);
+    candidates.push(`https://lh3.googleusercontent.com/d/${driveId}=s2000`);
+    candidates.push(`https://drive.google.com/uc?export=view&id=${driveId}`);
+    candidates.push(`https://lh3.googleusercontent.com/u/0/d/${driveId}=w1000`);
+    candidates.push(trimmed);
+  } else if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    // 2. Remote HTTP/HTTPS URL
+    const converted = convertMediaUrl(trimmed);
+    if (converted !== trimmed) candidates.push(converted);
+    candidates.push(trimmed);
+  } else {
+    // 3. Local relative path (Vercel static asset paths)
+    const normalized = trimmed.startsWith('/') ? trimmed : '/' + trimmed.replace(/^\.\//, '');
+    const filename = normalized.split('/').pop() || '';
+    const cleanFilename = decodeURIComponent(filename);
+    const sanitizedFilename = cleanFilename.replace(/ /g, '_').replace(/:/g, '_');
+
+    candidates.push(normalized);
+    candidates.push(`/assets/images/${filename}`);
+    candidates.push(`/assets/images/${sanitizedFilename}`);
+    candidates.push(`/assets/images/${cleanFilename}`);
+    candidates.push(`/uploads/${filename}`);
+    candidates.push(`/uploads/${sanitizedFilename}`);
+    candidates.push(`/uploads/${cleanFilename}`);
+    candidates.push(`/${filename}`);
+    candidates.push(`/${sanitizedFilename}`);
+  }
+
+  if (fallbackUrl && !candidates.includes(fallbackUrl)) {
+    candidates.push(fallbackUrl);
+  }
+  if (!candidates.includes(DEFAULT_IMAGE)) candidates.push(DEFAULT_IMAGE);
+  if (!candidates.includes(SECONDARY_IMAGE)) candidates.push(SECONDARY_IMAGE);
+
+  return Array.from(new Set(candidates)).filter(Boolean);
 };
 
 export const formatErrorMessage = (error: string): { message: string, suggestion: string } => {

@@ -1,7 +1,7 @@
 import React from 'react';
 import QRCode from 'qrcode';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, ChevronRight, Eye, Info, ShieldCheck, X, Loader2, Plus, Trash2, ShoppingCart, Undo, CreditCard, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, Info, ShieldCheck, X, Loader2, Plus, Trash2, Undo, CreditCard, ExternalLink } from 'lucide-react';
 import { Product } from '../types';
 import { MediaRenderer } from './MediaRenderer';
 import { safeToFixed, convertGoogleDriveUrl, formatPrice, t } from '../utils/helpers';
@@ -228,12 +228,12 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 200 }}
-            className="fixed inset-0 h-screen w-screen bg-paper z-[110] flex flex-col overflow-hidden tab-content font-typewriter"
+            className="fixed inset-0 h-screen w-screen bg-paper z-[110] flex flex-col overflow-hidden font-sans"
           >
             <div className="p-4 sm:p-6 md:px-8 flex justify-between items-center border-b border-ink/5 bg-paper/80 backdrop-blur-md sticky top-0 z-20">
               <button 
                 onClick={onClose}
-                className="flex items-center gap-2 text-ink/70 hover:text-ink font-mono text-[11px] uppercase tracking-widest transition-colors cursor-pointer"
+                className="flex items-center gap-2 text-ink/70 hover:text-ink font-sans text-[11px] font-medium uppercase tracking-widest transition-colors cursor-pointer"
               >
                 <span>←</span>
                 <span>BACK TO SHOP</span>
@@ -264,14 +264,14 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                           <Plus size={48} className="text-ink animate-bounce" />
                           <Link2 size={48} className="text-ink animate-bounce delay-75" />
                         </div>
-                        <p className="text-[10px] font-mono font-bold text-ink uppercase tracking-[0.2em] mt-4">DROP FILE OR LINK TO REPLACE</p>
+                        <p className="text-[10px] font-sans font-bold text-ink uppercase tracking-[0.2em] mt-4">DROP FILE OR LINK TO REPLACE</p>
                       </div>
                     )}
                     {isUploading && (
                       <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm">
                         <div className="flex flex-col items-center gap-2">
                           <Loader2 className="w-6 h-6 text-white animate-spin" />
-                          <p className="text-[10px] font-mono text-white tracking-widest uppercase">UPLOADING IMAGES...</p>
+                          <p className="text-[10px] font-sans text-white tracking-widest uppercase">UPLOADING IMAGES...</p>
                         </div>
                       </div>
                     )}
@@ -286,7 +286,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                       >
                         <MediaRenderer 
                           asset={product.images?.[activeImage]} 
-                          fallbackUrl={product.provenanceImage}
+                          fallbackUrl={product.provenanceImage || '/assets/images/IMG_4800_1_3.png'}
                           className="w-full h-full object-contain transition-all duration-500"
                         />
                       </motion.div>
@@ -364,7 +364,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                         className={`aspect-square border border-dashed border-ink/20 flex flex-col items-center justify-center gap-1.5 transition-all text-ink/40 hover:text-ink hover:border-ink hover:bg-ink/5 rounded-xs ${isDragging && uploadIndex === null ? 'bg-ink/10 border-ink scale-105' : ''}`}
                       >
                         <Plus size={16} />
-                        <span className="text-[8px] font-mono uppercase tracking-widest">{isDragging && uploadIndex === null ? 'UPLOAD' : 'ADD'}</span>
+                        <span className="text-[8px] font-sans uppercase tracking-widest font-medium">{isDragging && uploadIndex === null ? 'UPLOAD' : 'ADD'}</span>
                       </button>
                     )}
                   </div>
@@ -374,42 +374,22 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                 <div className="w-full p-6 sm:p-10 lg:p-12 flex flex-col justify-between space-y-8">
                   <div className="space-y-6">
                     <div>
-                      <h2 className="text-2xl sm:text-3xl md:text-4xl font-brand font-bold uppercase tracking-tight text-ink mb-2">
-                        {(() => {
-                          const titleText = product.name ? product.name.replace(/_/g, ' ') : '';
-                          const parts = titleText.split('3');
-                          return parts.map((part, index) => (
-                            <React.Fragment key={index}>
-                              {index > 0 && (
-                                <span className="inline-block" style={{ transform: 'skewX(-15deg) translateY(-0.02em)' }}>
-                                  <motion.span 
-                                    className="font-sans font-black text-[0.85em] inline-block align-baseline mx-[1px] cursor-pointer" 
-                                    style={{ fontFamily: '"Arial Black", "Impact", sans-serif', fontWeight: 900 }}
-                                    whileHover={{ rotate: 360 }}
-                                    transition={{ duration: 0.6, ease: "easeInOut" }}
-                                  >
-                                    3
-                                  </motion.span>
-                                </span>
-                              )}
-                              <span>{part}</span>
-                            </React.Fragment>
-                          ));
-                        })()}
+                      <h2 className="text-xl sm:text-2xl font-sans font-normal uppercase tracking-[0.16em] text-ink mb-1.5">
+                        {product.name ? product.name.replace(/_/g, ' ') : ''}
                       </h2>
 
-                      <p className="text-[1.4rem] font-numbers font-bold tracking-tight text-ink mt-2">
+                      <p className="text-sm font-sans font-normal text-ink/75 tracking-wider mt-0.5">
                         {formatPrice(product.price)}
                       </p>
                       
                       <div className="mt-3 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-                        <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-ink/80">
-                          IN STOCK • READY TO DISPATCH
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+                        <span className="text-[10px] font-sans font-normal uppercase tracking-wider text-ink/70">
+                          IN STOCK
                         </span>
                       </div>
 
-                      <p className="mt-5 text-[11px] font-mono leading-relaxed text-ink/70 uppercase max-w-lg border-t border-ink/10 pt-4">
+                      <p className="mt-5 text-[11px] font-sans leading-relaxed text-ink/70 uppercase max-w-lg border-t border-ink/10 pt-4">
                         Crafted from 100% organic cotton with a brushed fleece interior. Features a relaxed fit and reinforced ribbing at the cuffs and hems. Made to order in Portugal. Please allow 2 weeks till delivery. The Graphics may be slightly different from the photo.
                       </p>
                     </div>
@@ -418,7 +398,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                   {/* Size selector & Action Buttons */}
                   <div className="space-y-6 border-t border-ink/10 pt-6">
                     <div className="space-y-2">
-                      <div className="flex justify-between items-center text-[10px] font-mono uppercase tracking-widest text-ink/60">
+                      <div className="flex justify-between items-center text-[10px] font-sans uppercase tracking-widest text-ink/60 font-medium">
                         <span>SELECT SIZE</span>
                         {selectedSize && <span className="text-ink font-bold">SELECTED: {selectedSize}</span>}
                       </div>
@@ -427,7 +407,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                           <button 
                             key={size}
                             onClick={() => setSelectedSize(prev => prev === size ? '' : size)}
-                            className={`min-w-[44px] h-[40px] text-[12px] font-mono font-bold tracking-widest uppercase px-3 py-1 transition-all rounded-xs border cursor-pointer ${
+                            className={`min-w-[44px] h-[40px] text-[12px] font-sans font-bold tracking-widest uppercase px-3 py-1 transition-all rounded-xs border cursor-pointer ${
                               selectedSize === size 
                                 ? 'text-white bg-black border-black shadow-sm scale-105' 
                                 : 'text-ink border-ink/20 hover:border-ink hover:bg-black/5'
@@ -456,7 +436,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                               }
                               onAddToCart(product, selectedSize);
                             }}
-                            className="w-full py-3 border border-ink/20 hover:border-ink text-ink/80 hover:text-ink text-[11px] font-mono font-bold uppercase tracking-widest transition-all text-center rounded-xs cursor-pointer hover:bg-black/5"
+                            className="w-full py-3 border border-ink/20 hover:border-ink text-ink/80 hover:text-ink text-[11px] font-sans font-bold uppercase tracking-widest transition-all text-center rounded-xs cursor-pointer hover:bg-black/5"
                           >
                             + ADD TO SHOPPING BAG
                           </button>
@@ -467,7 +447,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                             href={product.stripe_payment_link}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="w-full py-3.5 bg-ink text-paper text-[12px] font-mono font-bold uppercase tracking-[0.2em] transition-all cursor-pointer hover:bg-black flex items-center justify-center gap-2 rounded-xs shadow-sm"
+                            className="w-full py-3.5 bg-ink text-paper text-[12px] font-sans font-bold uppercase tracking-[0.2em] transition-all cursor-pointer hover:bg-black flex items-center justify-center gap-2 rounded-xs shadow-sm"
                           >
                             <CreditCard size={15} /> BUY NOW WITH STRIPE
                           </a>
@@ -479,7 +459,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                               }
                               onAddToCart(product, selectedSize);
                             }}
-                            className="w-full py-3 border border-ink/20 hover:border-ink text-ink/80 hover:text-ink text-[11px] font-mono font-bold uppercase tracking-widest transition-all text-center rounded-xs cursor-pointer hover:bg-black/5"
+                            className="w-full py-3 border border-ink/20 hover:border-ink text-ink/80 hover:text-ink text-[11px] font-sans font-bold uppercase tracking-widest transition-all text-center rounded-xs cursor-pointer hover:bg-black/5"
                           >
                             + ADD TO SHOPPING BAG
                           </button>
@@ -493,11 +473,11 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                             }
                             onAddToCart(product, selectedSize);
                           }}
-                          className="w-full py-3.5 bg-black text-white hover:bg-black/80 text-[12px] font-mono font-bold uppercase tracking-[0.2em] transition-all cursor-pointer flex items-center justify-center gap-2 rounded-xs shadow-sm active:scale-[0.99]"
+                          className="w-full py-3.5 bg-black text-white hover:bg-black/80 text-[12px] font-sans font-bold uppercase tracking-[0.2em] transition-all cursor-pointer flex items-center justify-center gap-2 rounded-xs shadow-sm active:scale-[0.99]"
                           id="add-to-bag-btn"
                           aria-label="Select Product"
                         >
-                          <ShoppingCart size={15} /> + SELECT PRODUCT
+                          <span>+ SELECT PRODUCT</span>
                         </button>
                       )}
                     </div>

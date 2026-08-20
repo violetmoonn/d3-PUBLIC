@@ -112,23 +112,8 @@ export const CartView: React.FC<CartViewProps> = ({
                   <div key={`${item.id}-${item.selectedSize}`} className="py-2.5">
                     <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-3 items-center">
                       
-                      {/* Product Thumbnail & Details */}
-                      <div className="sm:col-span-6 flex items-center gap-2.5">
-                        <div className="w-12 h-12 bg-ink/5 border border-ink/10 overflow-hidden shrink-0">
-                          {coverUrl ? (
-                            <img 
-                              src={coverUrl} 
-                              alt={item.name} 
-                              className="w-full h-full object-cover" 
-                              referrerPolicy="no-referrer"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-ink/30 text-[9px]">
-                              NO MEDIA
-                            </div>
-                          )}
-                        </div>
-
+                      {/* Details */}
+                      <div className="sm:col-span-6 flex items-center">
                         <div className="space-y-0.5 min-w-0 flex-1">
                           <h3 className="text-[11px] font-bold uppercase tracking-wider text-ink truncate">
                             {item.name}
@@ -215,23 +200,43 @@ export const CartView: React.FC<CartViewProps> = ({
           </div>
 
           {/* Right Column: Order Summary & Checkout Card (Spans 5 cols on lg) */}
-          <div className="lg:col-span-5 bg-paper border border-ink/10 p-4 space-y-3 shadow-xs sticky top-20">
+          <div className="lg:col-span-5 bg-paper border border-ink/10 p-5 space-y-4 shadow-xs sticky top-20 text-left">
             
             <div className="border-b border-ink/10 pb-2 text-left">
-              <h2 className="text-[11px] font-bold uppercase tracking-[0.15em] text-ink text-left">
-                ORDER SUMMARY
+              <h2 className="text-[12px] font-bold uppercase tracking-[0.18em] text-ink text-left">
+                Summary
               </h2>
             </div>
 
-            {/* Cost Breakdown */}
-            <div className="space-y-2 text-[11px] uppercase tracking-wider font-mono">
-              <div className="flex justify-between items-center">
-                <span className="text-ink/60">SUBTOTAL</span>
-                <span className="font-bold text-ink">{formatPrice(subtotal)}</span>
-              </div>
+            {/* Promo Code Section */}
+            <div className="space-y-2 text-left">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-ink/70 block">
+                Do you have a Promo Code?
+              </span>
+              <form onSubmit={handleApply} className="space-y-1.5 text-left">
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    value={discountInput}
+                    onChange={(e) => setDiscountInput(e.target.value.toUpperCase())}
+                    placeholder="ENTER CODE"
+                    className="w-full bg-ink/5 border border-ink/15 p-2 text-[10px] font-mono focus:outline-none focus:border-ink uppercase text-left placeholder:text-left"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!discountInput.trim()}
+                    className="px-3.5 py-2 bg-ink text-paper font-bold text-[10px] uppercase tracking-wider hover:opacity-85 transition-opacity disabled:opacity-30 cursor-pointer shrink-0"
+                  >
+                    APPLY
+                  </button>
+                </div>
+                {discountError && (
+                  <p className="text-[9px] text-rose-600 uppercase font-bold">{discountError}</p>
+                )}
+              </form>
 
               {discount && (
-                <div className="flex justify-between items-center text-emerald-800 font-bold bg-emerald-500/10 p-1.5 border border-emerald-500/20 text-[10px]">
+                <div className="flex justify-between items-center text-emerald-800 font-bold bg-emerald-500/10 p-1.5 border border-emerald-500/20 text-[10px] mt-1">
                   <div className="flex items-center gap-1">
                     <Tag size={11} />
                     <span>PROMO ({discount.code})</span>
@@ -250,40 +255,30 @@ export const CartView: React.FC<CartViewProps> = ({
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Cost Breakdown with Exact User-Requested Fields */}
+            <div className="space-y-2.5 text-[11px] uppercase tracking-wider font-mono border-t border-ink/10 pt-3">
+              <div className="flex justify-between items-center">
+                <span className="text-ink/70 font-medium">Subtotal</span>
+                <span className="font-bold text-ink">{subtotal > 0 ? formatPrice(subtotal) : '—'}</span>
+              </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-ink/60">SHIPPING</span>
-                <span className="text-ink/60 text-[10px]">CALCULATED AT CHECKOUT</span>
+                <span className="text-ink/70 font-medium">Estimated Shipping & Handling</span>
+                <span className="text-ink/60 font-medium">—</span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-ink/70 font-medium">Estimated Tax</span>
+                <span className="text-ink/60 font-medium">—</span>
               </div>
             </div>
 
-            {/* Promo Code Form */}
-            <form onSubmit={handleApply} className="space-y-1.5 pt-2 border-t border-ink/10 text-left">
-              <div className="flex gap-1.5">
-                <input
-                  type="text"
-                  value={discountInput}
-                  onChange={(e) => setDiscountInput(e.target.value.toUpperCase())}
-                  placeholder="PROMO CODE"
-                  className="w-full bg-ink/5 border border-ink/15 p-2 text-[10px] font-mono focus:outline-none focus:border-ink uppercase text-left placeholder:text-left"
-                />
-                <button
-                  type="submit"
-                  disabled={!discountInput.trim()}
-                  className="px-3 py-2 bg-ink text-paper font-bold text-[10px] uppercase tracking-wider hover:opacity-85 transition-opacity disabled:opacity-30 cursor-pointer shrink-0"
-                >
-                  APPLY
-                </button>
-              </div>
-              {discountError && (
-                <p className="text-[9px] text-rose-600 uppercase font-bold">{discountError}</p>
-              )}
-            </form>
-
             {/* Total Display */}
-            <div className="border-t border-ink/10 pt-2 flex justify-between items-baseline">
-              <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-ink">TOTAL</span>
-              <span className="text-base font-bold text-ink">{formatPrice(total)}</span>
+            <div className="border-t border-ink/10 pt-3 flex justify-between items-baseline">
+              <span className="text-[12px] font-bold uppercase tracking-[0.15em] text-ink">Total</span>
+              <span className="text-base font-bold text-ink">{total > 0 ? formatPrice(total) : '—'}</span>
             </div>
 
             {/* Main Proceed to Checkout Action */}

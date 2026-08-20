@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2, Lock, LogIn, User, X } from 'lucide-react';
+import { Loader2, Lock, LogIn, User, X, Layers, ExternalLink } from 'lucide-react';
 
 interface AdminLoginModalProps {
   isOpen: boolean;
@@ -9,6 +9,7 @@ interface AdminLoginModalProps {
   onGoogleLogin: () => void;
   password: string;
   setPassword: (password: string) => void;
+  onOpenAirtable?: () => void;
 }
 
 export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ 
@@ -17,7 +18,8 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
   onLogin, 
   onGoogleLogin,
   password,
-  setPassword
+  setPassword,
+  onOpenAirtable
 }) => {
   const [isLoading, setIsLoading] = React.useState(false);
 
@@ -111,6 +113,20 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
                   <User size={15} className="group-hover:scale-110 transition-transform stroke-[1.5]" />
                   CONTINUE WITH GOOGLE
                 </button>
+
+                {onOpenAirtable && (
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onOpenAirtable();
+                    }}
+                    className="w-full bg-ink/5 border border-ink/15 text-ink py-3 text-[11px] font-mono font-medium uppercase tracking-wider rounded-md flex items-center justify-center gap-2.5 hover:bg-ink hover:text-paper transition-all cursor-pointer group"
+                  >
+                    <Layers size={15} className="group-hover:scale-110 transition-transform stroke-[1.5]" />
+                    LIVE AIRTABLE STOREFRONT
+                  </button>
+                )}
               </div>
 
               <p className="mt-8 text-[9px] font-mono uppercase text-center text-ink/30 leading-relaxed">

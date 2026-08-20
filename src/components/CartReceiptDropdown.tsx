@@ -8,7 +8,6 @@ import {
   ArrowRight, 
   Check, 
   Tag, 
-  ShoppingCart, 
   Lock,
   ArrowUpRight
 } from 'lucide-react';
@@ -175,10 +174,7 @@ export const CartReceiptDropdown: React.FC<CartReceiptDropdownProps> = ({
 
               {/* Items List or Empty State */}
               {items.length === 0 ? (
-                <div className="py-8 text-center space-y-3">
-                  <div className="w-10 h-10 border border-dashed border-black/20 rounded-full flex items-center justify-center mx-auto text-black/40">
-                    <ShoppingCart size={18} strokeWidth={1.5} />
-                  </div>
+                <div className="py-8 text-center space-y-2.5">
                   <div className="space-y-1">
                     <p className="text-[11px] font-medium tracking-wider uppercase text-black">
                       YOUR CART IS EMPTY
@@ -248,15 +244,7 @@ export const CartReceiptDropdown: React.FC<CartReceiptDropdownProps> = ({
                           </div>
 
                           {/* Item Details */}
-                          <div className="flex-1 px-2 flex gap-2">
-                            {itemImg && (
-                              <img
-                                src={itemImg}
-                                alt={item.name}
-                                className="w-8 h-8 object-cover bg-black/5 rounded-sm shrink-0 border border-black/10"
-                                referrerPolicy="no-referrer"
-                              />
-                            )}
+                          <div className="flex-1 px-2">
                             <div className="min-w-0 flex-1">
                               <p className="text-[10px] uppercase font-medium text-black leading-tight truncate">
                                 {item.name}

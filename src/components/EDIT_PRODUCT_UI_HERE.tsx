@@ -258,14 +258,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               <CloudUpload className="w-10 h-10 text-ink animate-bounce" />
               <Link2 className="w-10 h-10 text-ink animate-bounce delay-75" />
             </div>
-            <p className="text-[10px] font-mono font-bold text-ink uppercase tracking-wider mt-[var(--spacing-phi-4)]">DROP FILE OR LINK</p>
+            <p className="text-[10px] font-sans font-bold text-ink uppercase tracking-wider mt-[var(--spacing-phi-4)]">DROP FILE OR LINK</p>
           </div>
         )}
         {isUploading && (
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm">
             <div className="flex flex-col items-center gap-[var(--spacing-phi-2)]">
               <Loader2 className="w-6 h-6 text-white animate-spin" />
-              <p className="text-[8px] font-mono text-white tracking-wider uppercase">UPLOADING...</p>
+              <p className="text-[8px] font-sans text-white tracking-wider uppercase">UPLOADING...</p>
             </div>
           </div>
         )}
@@ -274,7 +274,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <MediaRenderer 
               key={activeAsset.url || safeIdx}
               asset={activeAsset} 
-              fallbackUrl={product.provenanceImage}
+              fallbackUrl={product.provenanceImage || '/assets/images/IMG_4800_1_3.png'}
               className={`w-full h-full object-contain p-4 bg-transparent contrast-[1.05] transition-opacity duration-300 ${totalPhotos > 1 && safeIdx === 0 ? 'group-hover:opacity-0' : ''}`} 
             />
             {totalPhotos > 1 && safeIdx === 0 && productPhotos[1] && (
@@ -282,7 +282,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 <MediaRenderer 
                   key={productPhotos[1].url || 1}
                   asset={productPhotos[1]} 
-                  fallbackUrl={product.provenanceImage}
+                  fallbackUrl={product.provenanceImage || '/assets/images/IMG_3215_3_3.png'}
                   className="w-full h-full object-contain p-4 bg-transparent contrast-[1.05]" 
                 />
               </div>
@@ -356,11 +356,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         )}
       </div>
 
-      <div className={`p-3.5 flex flex-col flex-grow items-center justify-center text-center space-y-2 ${isCenterpiece ? 'min-h-[140px] py-6' : 'min-h-[120px]'}`}>
+      <div className={`pt-3 pb-3 px-3 flex flex-col flex-grow items-center justify-center text-center space-y-1 ${isCenterpiece ? 'py-4' : ''}`}>
         {/* Product Name */}
         <h3 
           onClick={() => onSelect(product)}
-          className={`font-mono font-medium uppercase tracking-[0.14em] text-ink cursor-pointer hover:opacity-70 transition-opacity line-clamp-2 text-center w-full ${isCenterpiece ? 'text-sm sm:text-base md:text-lg' : 'text-[11px]'}`}
+          className={`font-sans font-normal uppercase tracking-[0.16em] text-ink cursor-pointer hover:opacity-70 transition-opacity line-clamp-1 text-center w-full ${isCenterpiece ? 'text-sm sm:text-base font-medium' : 'text-[11px]'}`}
         >
           {product.name}
         </h3>
@@ -376,13 +376,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 onChange={(e) => setTempPrice(parseFloat(e.target.value))}
                 onBlur={handlePriceSave}
                 onKeyDown={(e) => e.key === 'Enter' && handlePriceSave()}
-                className="w-16 bg-ink/5 border-none p-0 font-mono text-xs text-center focus:ring-0 font-medium"
+                className="w-16 bg-ink/5 border-none p-0 font-sans text-xs text-center focus:ring-0 font-normal"
               />
-              <span className="font-mono text-xs font-normal">USD</span>
+              <span className="font-sans text-xs font-normal text-ink/60">USD</span>
             </div>
           ) : (
             <span 
-              className={`font-mono font-medium text-center ${isCenterpiece ? 'text-sm sm:text-base md:text-lg' : 'text-xs'} ${isAdmin ? 'cursor-pointer hover:bg-ink/5 px-2 py-0.5 rounded' : ''}`}
+              className={`font-sans font-normal text-ink/75 tracking-wider text-center ${isCenterpiece ? 'text-xs sm:text-sm' : 'text-[11px]'} ${isAdmin ? 'cursor-pointer hover:bg-ink/5 px-2 py-0.5 rounded' : ''}`}
               onClick={(e) => {
                 if (isAdmin) {
                   e.stopPropagation();
@@ -395,7 +395,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           )}
 
           {isAdmin && (
-            <span className="text-[8px] font-mono font-medium text-ink/60 uppercase tracking-widest text-center">
+            <span className="text-[8px] font-sans font-normal text-ink/50 uppercase tracking-widest text-center mt-0.5">
               IN STOCK ({product.stock})
             </span>
           )}

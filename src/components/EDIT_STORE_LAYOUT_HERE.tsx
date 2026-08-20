@@ -65,11 +65,11 @@ export const StoreView: React.FC<StoreViewProps> = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="space-y-8"
+      className="space-y-6"
     >
-      <div className="max-w-[1440px] mx-auto px-[var(--spacing-phi-5)] sm:px-[var(--spacing-phi-6)] md:px-[var(--spacing-phi-7)] pt-4">
+      <div className="max-w-[1440px] mx-auto px-[var(--spacing-phi-5)] sm:px-[var(--spacing-phi-6)] md:px-[var(--spacing-phi-7)] pt-2">
         {isSingleProduct ? (
-          <div className="flex flex-col items-center justify-center w-full py-2 sm:py-6 md:py-10">
+          <div className="flex flex-col items-center justify-center w-full py-2 sm:py-6 md:py-8">
             <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl">
               <ProductCard 
                 key={filteredProducts[0].id || `${filteredProducts[0].name}-0`} 
@@ -95,7 +95,7 @@ export const StoreView: React.FC<StoreViewProps> = ({
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
                   onClick={onAddProduct}
-                  className="px-6 py-3 border border-dashed border-ink/30 flex items-center gap-2 hover:border-ink hover:bg-ink/5 transition-all text-ink/60 hover:text-ink text-xs font-mono uppercase tracking-widest"
+                  className="px-6 py-3 border border-dashed border-ink/30 flex items-center gap-2 hover:border-ink hover:bg-ink/5 transition-all text-ink/60 hover:text-ink text-xs font-sans uppercase tracking-widest font-medium"
                 >
                   <Plus size={16} />
                   <span>ADD NEW ARTIFACT</span>
@@ -135,8 +135,8 @@ export const StoreView: React.FC<StoreViewProps> = ({
                   <Plus size={24} />
                 </div>
                 <div className="text-center px-4">
-                  <p className="text-[10px] font-mono tracking-[0.2em] uppercase">NEW ARTIFACT</p>
-                  <p className="text-[8px] font-mono opacity-60 uppercase mt-2">CLICK TO CREATE</p>
+                  <p className="text-[10px] font-sans font-medium tracking-[0.2em] uppercase">NEW ARTIFACT</p>
+                  <p className="text-[8px] font-sans opacity-60 uppercase mt-2">CLICK TO CREATE</p>
                 </div>
               </motion.button>
             )}

@@ -43,7 +43,6 @@ import {
   Settings,
   Share,
   ShieldCheck,
-  ShoppingCart,
   Smartphone,
   Sparkles,
   Square,
@@ -85,13 +84,11 @@ import {
   where, 
   writeBatch
 } from './firebase';
-import { GoogleGenAI, Type } from "@google/genai";
 import { Announcement, AppSettings, CartItem, DiscountCode, DriveLink, LogEntry, Order, Product, ProductAsset } from './types';
 import { ProductCard } from './components/EDIT_PRODUCT_UI_HERE';
 import { products as fileProducts } from '../EDIT_PRODUCT_DATA_HERE';
 import { MediaRenderer } from './components/MediaRenderer';
 import { convertGoogleDriveUrl, formatErrorMessage, generateUid, getDriveFileId, safeToFixed, getMathematicalFontSize, getMathematicalLetterTracking, t } from './utils/helpers';
-import '@google/model-viewer';
 
 // Extracted Components
 import { AdminLoginModal } from './components/AdminLoginModal';
@@ -112,6 +109,7 @@ import { SuccessOverlay } from './components/SuccessOverlay';
 import { ProductModal } from './components/modals/ProductModal';
 import { UserArtifactSubmissionModal } from './components/modals/UserArtifactSubmissionModal';
 import { BulkDriveImportModal } from './components/modals/BulkDriveImportModal';
+import { GoogleDrivePublisherModal } from './components/modals/GoogleDrivePublisherModal';
 import { SizeChartModal } from './components/modals/SizeChartModal';
 import { SubscribeListModal } from './components/modals/SubscribeListModal';
 import { FooterNewsletter } from './components/FooterNewsletter';
@@ -123,6 +121,8 @@ import { SurgicalVideosView } from './components/SurgicalVideosView';
 import { HomeView } from './components/HomeView';
 import { CookieConsent } from './components/CookieConsent';
 import { STORE_LOCATIONS } from './components/StoreLocationSelector';
+import { AirtableStorefront } from './components/AirtableStorefront';
+import { AirtableStorefrontModal } from './components/modals/AirtableStorefrontModal';
 
 // --- Constants & Helpers ---
 
@@ -330,6 +330,7 @@ export default function App() {
   const [footerCorporateOpen, setFooterCorporateOpen] = useState(false);
   const [footerLegalHovered, setFooterLegalHovered] = useState(false);
   const [footerLegalOpen, setFooterLegalOpen] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
     let lastScrollY = window.scrollY;
@@ -341,6 +342,7 @@ export default function App() {
         setIsHeaderHidden(false);
       }
       lastScrollY = currentScrollY;
+      setShowScrollTop(currentScrollY > 300);
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
@@ -552,6 +554,9 @@ export default function App() {
   const [isUserSubmissionOpen, setIsUserSubmissionOpen] = useState(false);
   const [focusedProductId, setFocusedProductId] = useState<string | null>(null);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [isDrivePublisherOpen, setIsDrivePublisherOpen] = useState(false);
+  const [drivePublisherTargetProdId, setDrivePublisherTargetProdId] = useState<string | undefined>(undefined);
+  const [isAirtableModalOpen, setIsAirtableModalOpen] = useState(false);
   const [isSizeChartOpen, setIsSizeChartOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
   const [orderSuccess, setOrderSuccess] = useState<Order | null>(null);
@@ -706,14 +711,28 @@ export default function App() {
         if (resp.ok) {
           const apiProducts = await resp.json();
           if (Array.isArray(apiProducts) && apiProducts.length > 0) {
-            setProducts(apiProducts.map(p => ({
-              ...p,
-              images: (p.images || []).map((img: any) => ({
+            const formatted = apiProducts.map(p => {
+              const formattedImages = (p.images || []).map((img: any, idx: number) => ({
                 ...img,
+                url: convertGoogleDriveUrl(img.url),
                 uid: img.uid || generateUid(),
-                type: (img.type === 'video' || img.type === 'model3d') ? img.type : 'image'
-              }))
-            })));
+                type: (img.type === 'video' || img.type === 'model3d') ? img.type : 'image',
+                created_at: img.created_at || new Date(Date.now() + idx * 1000).toISOString()
+              }));
+
+              // Chronological ordering of attachments within product
+              formattedImages.sort((a: any, b: any) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+
+              return {
+                ...p,
+                images: formattedImages,
+                created_at: p.created_at || new Date().toISOString()
+              };
+            });
+
+            // Sort products chronologically (newest first)
+            formatted.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+            setProducts(formatted);
             return true;
           }
         }
@@ -1192,14 +1211,15 @@ export default function App() {
       const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)$/) || url.includes('video') || url.includes('/view');
       const existingImages = Array.isArray(product.images) ? product.images : [];
       
-      const newImages = [
-        {
-          url: convertedUrl,
-          type: (isVideo ? 'video' : 'image') as any,
-          uid: generateUid()
-        },
-        ...existingImages
-      ];
+      const newAttachment = {
+        url: convertedUrl,
+        type: (isVideo ? 'video' : 'image') as any,
+        uid: generateUid(),
+        created_at: new Date().toISOString()
+      };
+
+      const newImages = [...existingImages, newAttachment];
+      newImages.sort((a: any, b: any) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
 
       await callAdminApi('POST', '/api/admin/db/products', { 
         id: productId, 
@@ -1211,6 +1231,106 @@ export default function App() {
     } catch (err: any) {
       console.error("LINK_ADDITION_FAILED:", err);
       setGlobalError("LINK_ADDITION_FAILED");
+    }
+  };
+
+  const handlePublishNewProductFromDrive = async (productData: {
+    name: string;
+    description: string;
+    price: number;
+    category: string;
+    images: { url: string; type: string; created_at: string; uid: string }[];
+  }) => {
+    try {
+      const newProd: Partial<Product> = {
+        name: productData.name,
+        description: productData.description,
+        price: productData.price || 350,
+        category: productData.category || 'ARTIFACT',
+        images: productData.images.map(img => ({
+          url: img.url,
+          type: (img.type === 'video' ? 'video' : 'image') as any,
+          uid: img.uid || generateUid(),
+          created_at: img.created_at
+        })),
+        stock: 50,
+        is_visible: true
+      };
+
+      // Direct post to keyless /api/products endpoint for immediate sync
+      try {
+        await fetch('/api/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newProd)
+        });
+      } catch (apiErr) {
+        console.warn('API sync notification:', apiErr);
+      }
+
+      await handleAddProduct(newProd);
+
+      // Record drive link assets in repository
+      for (const img of productData.images) {
+        try {
+          await callAdminApi('POST', '/api/admin/db/drive_links', {
+            data: {
+              original_url: img.url,
+              converted_url: img.url,
+              file_id: getDriveFileId(img.url) || 'GOOGLE_DRIVE_PHOTO'
+            }
+          });
+        } catch {
+          // ignore duplicate link errors
+        }
+      }
+
+      setSuccessMessage(`PRODUCT "${productData.name}" PUBLISHED TO STOREFRONT`);
+      logActivity("GOOGLE_DRIVE_PRODUCT_PUBLISH", `Published ${productData.name} from Google Drive`, 'SUCCESS');
+    } catch (err: any) {
+      console.error("Drive product publish error:", err);
+      setGlobalError(err.message || "Failed to publish product from Google Drive");
+      throw err;
+    }
+  };
+
+  const handleAttachDrivePhotosToProduct = async (
+    productId: string,
+    images: { url: string; type: string; created_at: string; uid: string }[],
+    setAsCover: boolean = false
+  ) => {
+    try {
+      const target = products.find(p => p.id === productId);
+      if (!target) throw new Error("Target product not found");
+
+      const newAssets: ProductAsset[] = images.map(img => ({
+        url: img.url,
+        type: (img.type === 'video' ? 'video' : 'image') as any,
+        uid: img.uid || generateUid(),
+        created_at: img.created_at
+      }));
+
+      let updatedImages: ProductAsset[];
+      if (setAsCover) {
+        const otherImages = (target.images || []).filter(img => !images.some(ni => ni.url === img.url));
+        updatedImages = [...newAssets, ...otherImages];
+      } else {
+        const existing = target.images || [];
+        updatedImages = [...existing, ...newAssets];
+        updatedImages.sort((a: any, b: any) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+      }
+
+      await handleUpdateProduct({
+        id: productId,
+        images: updatedImages
+      });
+
+      setSuccessMessage(`PHOTOS ATTACHED TO ${target.name}`);
+      logActivity("GOOGLE_DRIVE_ATTACH_PHOTOS", `Attached ${images.length} Drive photos to ${target.name}`, 'SUCCESS');
+    } catch (err: any) {
+      console.error("Drive attach photos error:", err);
+      setGlobalError(err.message || "Failed to attach photos to product");
+      throw err;
     }
   };
 
@@ -1372,7 +1492,7 @@ export default function App() {
     try {
       setSuccessMessage(`INITIATING_BULK_IMPORT_${data.length}_ASSETS...`);
       
-      // Fetch Stripe products for matching
+      // Fetch Stripe products for matching if available
       let stripeProducts: any[] = [];
       try {
         const response = await fetch('/api/admin/stripe-data');
@@ -1380,11 +1500,8 @@ export default function App() {
           stripeProducts = await response.json();
         }
       } catch (err) {
-        console.error("Failed to fetch Stripe data for matching:", err);
+        console.warn("Notice: Stripe data unavailable for auto-matching:", err);
       }
-
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const model = "gemini-3-flash-preview";
 
       let importCount = 0;
       for (const item of data) {
@@ -1398,73 +1515,20 @@ export default function App() {
           }
         });
 
-        let matchedStripe: any = null;
-        if (stripeProducts.length > 0) {
-          try {
-            // Use Gemini to match the image with a Stripe product
-            const prompt = `
-              Analyze the attached image and match it to the most relevant product from the Stripe catalog provided below.
-              Use the product name, description, and visual content of the image for matching.
-              
-              Stripe Catalog:
-              ${stripeProducts.map((p, i) => `${i}: ${p.name} - ${p.description}`).join('\n')}
-              
-              Return ONLY the index of the matching product as a number. If no match is found, return -1.
-            `;
-
-            const imgResponse = await fetch(item.converted);
-            const blob = await imgResponse.blob();
-            const base64 = await new Promise<string>((resolve) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.readAsDataURL(blob);
-            });
-            const base64Data = base64.split(',')[1];
-
-            const result = await ai.models.generateContent({
-              model,
-              contents: [
-                {
-                  parts: [
-                    { text: prompt },
-                    { inlineData: { mimeType: blob.type, data: base64Data } }
-                  ]
-                }
-              ],
-              config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                  type: Type.OBJECT,
-                  properties: {
-                    matchIndex: { type: Type.INTEGER }
-                  }
-                }
-              }
-            });
-
-            const json = JSON.parse(result.text);
-            if (json.matchIndex >= 0 && json.matchIndex < stripeProducts.length) {
-              matchedStripe = stripeProducts[json.matchIndex];
-            }
-          } catch (err) {
-            console.error("Gemini matching failed for item:", item.original, err);
-          }
-        }
-
         // Create a product artifact
         const artifactNumber = (products.length + importCount).toString().padStart(3, '0');
         await callAdminApi('POST', '/api/admin/db/products', {
           data: {
-            name: matchedStripe ? matchedStripe.name : `ARTIFACT_#${artifactNumber}`,
-            description: matchedStripe ? matchedStripe.description : "Crafted from 100% organic cotton with a brushed fleece interior. Features a relaxed fit and reinforced ribbing at the cuffs and hems. Made to order in Portugal. Please allow 2 weeks till delivery. The Graphics may be slightly different from the photo. For sizing reference please view the size chart.",
-            price: matchedStripe ? matchedStripe.price : 0,
+            name: `ARTIFACT_#${artifactNumber}`,
+            description: "Crafted from 100% organic cotton with a brushed fleece interior. Features a relaxed fit and reinforced ribbing at the cuffs and hems. Made to order in Portugal. Please allow 2 weeks till delivery. The Graphics may be slightly different from the photo. For sizing reference please view the size chart.",
+            price: 350,
             images: [{ url: item.converted, type: 'image' }],
             category: 'TOPS',
-            stock: matchedStripe ? 100 : 0,
-            is_visible: matchedStripe ? true : false,
-            stripe_product_id: matchedStripe ? matchedStripe.id : '',
-            stripe_payment_link: matchedStripe ? matchedStripe.payment_link : '',
-            stripe_buy_button_id: matchedStripe ? matchedStripe.buy_button_id : ''
+            stock: 100,
+            is_visible: true,
+            stripe_product_id: '',
+            stripe_payment_link: '',
+            stripe_buy_button_id: ''
           }
         });
       }
@@ -1479,41 +1543,12 @@ export default function App() {
   const handleScanDriveFolder = async (folderUrl: string) => {
     setSuccessMessage("SCANNING_DRIVE_FOLDER...");
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const model = "gemini-3-flash-preview";
-      
-      const response = await ai.models.generateContent({
-        model,
-        contents: `
-          List all the direct Google Drive file links found in this folder: ${folderUrl}. 
-          Focus on images and photos. 
-          Extract the file IDs and return them as full shareable URLs in the format: https://drive.google.com/file/d/FILE_ID/view
-          Return a JSON array of strings.
-        `,
-        config: {
-          tools: [{urlContext: {}}],
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              urls: {
-                type: Type.ARRAY,
-                items: { type: Type.STRING }
-              }
-            }
-          }
-        }
-      });
-      
-      const json = JSON.parse(response.text);
-      if (json.urls && json.urls.length > 0) {
-        const importData = json.urls.map((u: string) => ({
-          original: u,
-          converted: convertGoogleDriveUrl(u)
-        }));
-        await handleBulkImport(importData);
+      const fileId = getDriveFileId(folderUrl);
+      if (fileId) {
+        const converted = convertGoogleDriveUrl(folderUrl);
+        await handleBulkImport([{ original: folderUrl, converted }]);
       } else {
-        setGlobalError("NO_FILES_FOUND_IN_FOLDER. ENSURE_FOLDER_IS_PUBLIC.");
+        setGlobalError("INVALID_FOLDER_OR_FILE_URL. PLEASE_PASTE_A_VALID_GOOGLE_DRIVE_LINK.");
       }
     } catch (err) {
       console.error("Folder scan failed:", err);
@@ -1601,6 +1636,7 @@ export default function App() {
           onUpdateSize={updateCartSize}
           onOpenCart={() => { setView('cart'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
           onOpenAdmin={() => isAdmin ? setView('admin') : setIsAdminLoginOpen(true)}
+          onOpenAirtable={() => setIsAirtableModalOpen(true)}
           onOpenSubmission={() => {
             setIsUserSubmissionOpen(true);
           }}
@@ -1742,6 +1778,7 @@ export default function App() {
                 onSaveSettings={handleSaveSettings}
                 onOpenProductModal={(p) => { setEditingProduct(p || null); setIsProductModalOpen(true); }}
                 onOpenBulkImport={() => setIsBulkImportOpen(true)}
+                onOpenDrivePublisher={() => setIsDrivePublisherOpen(true)}
                 onFocusProduct={(id) => {
                   setFocusedProductId(id);
                   setAdminTab('PRODUCTS');
@@ -2101,10 +2138,9 @@ export default function App() {
                                 const targetProduct = products.find(p => p.id === provProduct.id);
                                 if (targetProduct) setSelectedProduct(targetProduct);
                               }}
-                              className="px-6 py-2.5 bg-ink text-paper hover:bg-zinc-800 transition-all font-mono text-[9px] font-bold tracking-widest uppercase flex items-center gap-2 mx-auto sm:mx-0 cursor-pointer"
+                              className="px-6 py-2.5 bg-ink text-paper hover:bg-zinc-800 transition-all font-sans text-[10px] font-bold tracking-widest uppercase flex items-center justify-center mx-auto sm:mx-0 cursor-pointer"
                             >
-                              <ShoppingCart size={12} />
-                              VIEW / PURCHASE ARTIFACT
+                              <span>VIEW / PURCHASE ARTIFACT</span>
                             </button>
                           </div>
                         </div>
@@ -2205,6 +2241,22 @@ export default function App() {
             <SustainabilityView onNavigate={setView} />
           )}
 
+          {view === 'airtable' && (
+            <motion.div
+              key="airtable"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="max-w-[1440px] mx-auto px-4 sm:px-6 md:px-8 py-6"
+            >
+              <AirtableStorefront 
+                defaultHeight={720}
+                title="Airtable Storefront"
+                subtitle="Live synced products, photography, and artifact inventory directly from Airtable"
+              />
+            </motion.div>
+          )}
+
           {view === 'cart' && (
             <CartView 
               items={cart}
@@ -2239,7 +2291,7 @@ export default function App() {
                     { id: 'home', label: t('home') || 'Home' },
                     { id: 'store', label: t('store') || 'Shop' },
                     { id: 'cart', label: 'Shopping Bag' },
-                    { id: 'gallery', label: t('gallery') || 'Gallery' }
+                    { id: 'gallery', label: t('gallery') || 'Gallery' },
                   ]
                     .filter(link => !settings.sections || settings.sections[link.id] !== false)
                     .sort((a, b) => a.label.localeCompare(b.label))
@@ -2572,6 +2624,12 @@ export default function App() {
         onGoogleLogin={handleGoogleLogin}
         password={adminPassword}
         setPassword={setAdminPassword}
+        onOpenAirtable={() => setIsAirtableModalOpen(true)}
+      />
+
+      <AirtableStorefrontModal
+        isOpen={isAirtableModalOpen}
+        onClose={() => setIsAirtableModalOpen(false)}
       />
 
       <CheckoutModal 
@@ -2610,6 +2668,25 @@ export default function App() {
         onSubscribe={handleSubscribeWaitlist}
       />
 
+      {/* Subtle Scroll to Top Button */}
+      <AnimatePresence>
+        {showScrollTop && (
+          <motion.button
+            initial={{ opacity: 0, y: 12, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 12, scale: 0.9 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="fixed bottom-6 right-6 z-40 w-9 h-9 sm:w-10 sm:h-10 bg-white/95 hover:bg-white text-black border border-black/15 shadow-md hover:shadow-lg rounded-full flex items-center justify-center cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 group"
+            aria-label="Scroll to top"
+            title="Scroll to top"
+            id="scroll-to-top-btn"
+          >
+            <ArrowUp size={15} className="transition-transform group-hover:-translate-y-0.5 text-black" strokeWidth={2} />
+          </motion.button>
+        )}
+      </AnimatePresence>
+
       {/* Admin Specific Modals */}
       {isAdmin && (
         <>
@@ -2632,6 +2709,18 @@ export default function App() {
             onClose={() => setIsBulkImportOpen(false)}
             onImport={handleBulkImport}
             onScanFolder={handleScanDriveFolder}
+          />
+          <GoogleDrivePublisherModal
+            isOpen={isDrivePublisherOpen}
+            onClose={() => {
+              setIsDrivePublisherOpen(false);
+              setDrivePublisherTargetProdId(undefined);
+            }}
+            products={products}
+            targetProductId={drivePublisherTargetProdId}
+            onPublishNewProduct={handlePublishNewProductFromDrive}
+            onAttachToProduct={handleAttachDrivePhotosToProduct}
+            onAddDriveLink={handleAddDriveLink}
           />
         </>
       )}

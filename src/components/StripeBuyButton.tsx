@@ -33,6 +33,10 @@ export const StripeBuyButton: React.FC<StripeBuyButtonProps> = ({
         script.id = scriptId;
         script.src = 'https://js.stripe.com/v3/buy-button.js';
         script.async = true;
+        script.crossOrigin = 'anonymous';
+        script.onerror = () => {
+          console.warn('[Notice] Stripe buy-button script failed to load.');
+        };
         document.head.appendChild(script);
       }
     }

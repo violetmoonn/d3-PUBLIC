@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Activity, ChevronLeft, ChevronRight, LayoutGrid, LogOut, Package, Settings, MessageSquare, UserCheck, Database, Megaphone, PlusCircle } from 'lucide-react';
+import { Activity, ChevronLeft, ChevronRight, LayoutGrid, LogOut, Package, Settings, MessageSquare, UserCheck, Database, Megaphone, PlusCircle, Layers } from 'lucide-react';
 import { Announcement, AppSettings, DiscountCode, DriveLink, LogEntry, Order, Product } from '../../types';
 import { HeroTab } from './HeroTab';
 import { ProductsTab } from './ProductsTab';
@@ -10,6 +10,8 @@ import { TransmissionsTab } from './TransmissionsTab';
 import { WaitlistTab, WaitlistEntry } from './WaitlistTab';
 import { D3CatalogCmsTab } from './D3CatalogCmsTab';
 import { ArtifactCreatorTab } from './ArtifactCreatorTab';
+import { AirtableStorefront } from '../AirtableStorefront';
+import { DriveLinksTab } from './DriveLinksTab';
 
 interface AdminDashboardProps {
   products: Product[];
@@ -38,6 +40,7 @@ interface AdminDashboardProps {
   onSaveSettings: (settings: AppSettings) => Promise<void>;
   onOpenProductModal: (product?: Partial<Product>) => void;
   onOpenBulkImport: () => void;
+  onOpenDrivePublisher?: () => void;
   onFocusProduct: (id: string) => void;
   onDeleteDriveLink: (id: string) => Promise<void>;
   onAddDriveLink: (url: string, productId?: string) => Promise<void>;
@@ -84,6 +87,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onSaveSettings,
   onOpenProductModal,
   onOpenBulkImport,
+  onOpenDrivePublisher,
   onFocusProduct,
   onDeleteDriveLink,
   onAddDriveLink,
@@ -112,7 +116,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const tabs = [
     { id: 'NEW_ARTIFACT', icon: PlusCircle, label: '+ NEW ARTIFACT' },
+    { id: 'DRIVE_PHOTOS', icon: Database, label: 'DRIVE PHOTOS & LINKS' },
     { id: 'CATALOG_CMS', icon: Database, label: 'D3 CATALOG CMS' },
+    { id: 'AIRTABLE_SYNC', icon: Layers, label: 'AIRTABLE SYNC' },
     { id: 'PRODUCTS', icon: Package, label: 'PRODUCTS' },
     { id: 'TRANSMISSIONS', icon: MessageSquare, label: 'TRANSMISSIONS' },
     { id: 'WAITLIST', icon: UserCheck, label: 'WAITING LIST' },
@@ -292,8 +298,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 />
               )}
 
+              {activeTab === 'DRIVE_PHOTOS' && (
+                <DriveLinksTab 
+                  driveLinks={driveLinks}
+                  products={products}
+                  onDelete={onDeleteDriveLink}
+                  onAdd={onAddDriveLink}
+                  onBulkImport={onOpenBulkImport}
+                  onOpenDrivePublisher={onOpenDrivePublisher}
+                />
+              )}
+
               {activeTab === 'CATALOG_CMS' && (
                 <D3CatalogCmsTab />
+              )}
+
+              {activeTab === 'AIRTABLE_SYNC' && (
+                <div className="p-6 sm:p-8 space-y-6">
+                  <AirtableStorefront 
+                    defaultHeight={740}
+                    title="Live Airtable Inventory & Media Sync"
+                    subtitle="Direct live access to your Airtable base (appU8lAjcTDz63elZ) for managing products and media assets"
+                  />
+                </div>
               )}
 
               {activeTab === 'HERO' && (

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronDown, Globe, LayoutGrid, Menu, MonitorPlay, Moon, ShoppingCart, Sun, User, X, Plus, Clock, Search, ArrowRight, Tag, Lock, Sparkles } from 'lucide-react';
+import { ChevronDown, Globe, LayoutGrid, Menu, MonitorPlay, Moon, Sun, User, X, Plus, Clock, Search, ArrowRight, Tag, Lock, Sparkles } from 'lucide-react';
 import { AppSettings, CartItem, DiscountCode } from '../types';
 import { getMathematicalFontSize, getMathematicalLetterTracking, t } from '../utils/helpers';
 import { CartReceiptDropdown } from './CartReceiptDropdown';
@@ -27,6 +27,7 @@ interface NavbarProps {
   onUpdateQuantity?: (id: string | number, size: string, quantity: number) => void;
   onUpdateSize?: (id: string | number, oldSize: string, newSize: string) => void;
   onOpenAdmin: () => void;
+  onOpenAirtable?: () => void;
   onOpenSubmission: () => void;
   isAdmin: boolean;
   searchTerm: string;
@@ -55,6 +56,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onUpdateQuantity,
   onUpdateSize,
   onOpenAdmin, 
+  onOpenAirtable,
   onOpenSubmission,
   isAdmin, 
   searchTerm, 
@@ -250,20 +252,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => {
                 setIsReceiptOpen(prev => !prev);
               }}
-              className="hover:opacity-50 transition-opacity focus:outline-none flex items-center gap-1.5 relative cursor-pointer text-black font-sans text-[12px] sm:text-[11px] font-normal leading-none"
+              className="hover:opacity-60 transition-opacity focus:outline-none flex items-center relative cursor-pointer text-black font-sans text-[11px] sm:text-[12px] font-medium tracking-wider uppercase leading-none"
               title={t('checkout_bag') || 'Shopping Cart'}
               aria-label={t('checkout_bag') || 'Shopping Cart'}
               id="shopping-bag-btn"
             >
-              <div className="flex items-center gap-1.5">
-                <ShoppingCart className="w-4 h-4 stroke-[1.6]" />
-                <span className="hidden sm:inline">
-                  Cart{cartCount > 0 ? ` (${cartCount})` : ''}
-                </span>
-                {cartCount > 0 && (
-                  <span className="sm:hidden text-[11px] font-mono font-medium leading-none">({cartCount})</span>
-                )}
-              </div>
+              <span>
+                Cart{cartCount > 0 ? ` (${cartCount})` : ''}
+              </span>
             </button>
 
             {/* Dropdown Receipt-Like Form */}
