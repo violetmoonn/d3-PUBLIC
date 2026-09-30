@@ -395,9 +395,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       if (!apiKey) throw new Error("GEMINI_API_KEY_NOT_FOUND");
       const ai = new GoogleGenAI({ apiKey });
       
-      // Use gemini-2.5-flash-image for image generation
+      // Highest-resolution image model (native 4K output)
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
+        model: 'gemini-3-pro-image-preview',
         contents: {
           parts: [
             {
@@ -407,7 +407,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         },
         config: {
           imageConfig: {
-            aspectRatio: "1:1"
+            aspectRatio: "1:1",
+            imageSize: "4K"
           }
         }
       });
