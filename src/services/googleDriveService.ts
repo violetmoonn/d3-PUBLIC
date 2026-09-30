@@ -61,7 +61,7 @@ export async function fetchGoogleDrivePhotos(
   const rawFiles: any[] = data.files || [];
 
   const photos: GoogleDrivePhoto[] = rawFiles.map(f => {
-    const directUrl = `https://drive.google.com/thumbnail?id=${f.id}&sz=w2000`;
+    const directUrl = `https://drive.google.com/thumbnail?id=${f.id}&sz=w4000`;
     return {
       id: f.id,
       name: f.name,
@@ -130,7 +130,7 @@ export async function uploadImageToGoogleDrive(
   }
 
   const created = await res.json();
-  const directUrl = `https://drive.google.com/thumbnail?id=${created.id}&sz=w2000`;
+  const directUrl = `https://drive.google.com/thumbnail?id=${created.id}&sz=w4000`;
 
   // Make file readable for public storefront view
   try {
