@@ -46,7 +46,7 @@ export function convertAttachmentUrl(url: string): string {
   const driveId = extractGoogleDriveFileId(trimmed);
   if (driveId) {
     // High-resolution public thumbnail endpoint that bypasses Google login/session requirements
-    return `https://drive.google.com/thumbnail?id=${driveId}&sz=w2000`;
+    return `https://drive.google.com/thumbnail?id=${driveId}&sz=w4000`;
   }
 
   // Dropbox direct link
@@ -186,7 +186,7 @@ export default async function handler(req: any, res: any) {
           fresh_attachment_url: freshUrl,
           candidates: [
             freshUrl,
-            `https://lh3.googleusercontent.com/d/${extractGoogleDriveFileId(singleDriveUrl) || ''}=s2000`,
+            `https://lh3.googleusercontent.com/d/${extractGoogleDriveFileId(singleDriveUrl) || ''}=s0`,
             singleDriveUrl
           ].filter(Boolean)
         });
