@@ -64,7 +64,7 @@ export const convertGoogleDriveUrl = (url: string): string => {
   const fileId = getDriveFileId(url);
   if (fileId) {
     // High-res universal thumbnail endpoint without Google session auth requirement
-    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w2000`;
+    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w4000`;
   }
   return convertMediaUrl(url);
 };
@@ -80,7 +80,7 @@ export const convertMediaUrl = (url: string): string => {
   // Google Drive
   const driveId = getDriveFileId(trimmed);
   if (driveId) {
-    return `https://drive.google.com/thumbnail?id=${driveId}&sz=w2000`;
+    return `https://drive.google.com/thumbnail?id=${driveId}&sz=w4000`;
   }
 
   // Dropbox
@@ -129,10 +129,10 @@ export const getMediaCandidates = (url: string, fallbackUrl?: string): string[] 
   // 1. Google Drive candidates
   const driveId = getDriveFileId(trimmed);
   if (driveId) {
-    candidates.push(`https://drive.google.com/thumbnail?id=${driveId}&sz=w2000`);
-    candidates.push(`https://lh3.googleusercontent.com/d/${driveId}=s2000`);
+    candidates.push(`https://drive.google.com/thumbnail?id=${driveId}&sz=w4000`);
+    candidates.push(`https://lh3.googleusercontent.com/d/${driveId}=s0`);
     candidates.push(`https://drive.google.com/uc?export=view&id=${driveId}`);
-    candidates.push(`https://lh3.googleusercontent.com/u/0/d/${driveId}=w1000`);
+    candidates.push(`https://lh3.googleusercontent.com/u/0/d/${driveId}=s0`);
     candidates.push(trimmed);
   } else if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
     // 2. Remote HTTP/HTTPS URL
